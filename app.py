@@ -1,8 +1,8 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import pydeck as pdk
 import plotly.express as px
+import plotly.graph_objects as go
 from datetime import datetime
 
 # -----------------------------------------------------------------------------
@@ -165,7 +165,7 @@ def generate_live_event():
     st.session_state.total_exposure += leakage
 
 # -----------------------------------------------------------------------------
-# 3. SIDEBAR CONTROLS & MANUAL/AUTO REFRESH
+# 3. SIDEBAR CONTROLS
 # -----------------------------------------------------------------------------
 st.sidebar.markdown("### ⚡ ENGINE CONTROL")
 run_simulation = st.sidebar.toggle("Stream Live Transactions", value=True)
@@ -176,7 +176,7 @@ if st.sidebar.button("Generate Next Event Step"):
 st.sidebar.divider()
 st.sidebar.markdown("**System Telemetry**")
 st.sidebar.caption("Status: Active Reconciler")
-st.sidebar.caption("Diagram Rendering: WebGL Ambient Network")
+st.sidebar.caption("Diagram Rendering: Interactive Horizontal Sankey Flow")
 
 # -----------------------------------------------------------------------------
 # 4. DASHBOARD HEADER & AMBIENT METRICS
@@ -212,106 +212,61 @@ col3.metric("Flagged Exposure (Leakage)", f"R{st.session_state.total_exposure:,.
 col4.metric("Engine Throughput", f"{len(st.session_state.transactions)} txns/buffer")
 
 # -----------------------------------------------------------------------------
-# 5. WEBGL ANIMATED NETWORK
+# 5. HORIZONTAL INTERACTIVE CAPITAL & PHYSICAL FLOW DIAGRAM
 # -----------------------------------------------------------------------------
-st.markdown('<div class="cyber-section">1. AMBIENT CAPITAL & PHYSICAL FLOW DIAGRAM</div>', unsafe_allow_html=True)
+st.markdown('<div class="cyber-section">1. AMBIENT PHYSICAL-TO-FINANCIAL FLOW DIAGRAM</div>', unsafe_allow_html=True)
 
-nodes_data = [
-    {"name": "1. WEIGHBRIDGE GATE", "subtext": "Physical Scale Reality", "coords": [29.210, -25.850], "color": [56, 189, 248]},
-    {"name": "2. DIGITAL LOG", "subtext": "Canonical Record", "coords": [29.245, -25.850], "color": [129, 140, 248]},
-    {"name": "3. TRUEFLOW QUANT ENGINE", "subtext": "Deterministic & Z-Score Math", "coords": [29.280, -25.850], "color": [52, 211, 153]},
-    {"name": "4. SETTLED LIQUIDITY", "subtext": "Clean Payment Approved", "coords": [29.315, -25.825], "color": [16, 185, 129]},
-    {"name": "5. LEAKAGE FLAGGED", "subtext": "Quant Anomaly Blocked", "coords": [29.315, -25.875], "color": [239, 68, 68]}
+clean_flow = st.session_state.total_gross - st.session_state.total_exposure
+leakage_flow = st.session_state.total_exposure if st.session_state.total_exposure > 0 else 1.0
+
+node_labels = [
+    "1. WEIGHBRIDGE GATE<br><b>Physical Scale Reality</b>",
+    "2. DIGITAL LOG<br><b>Canonical Record</b>",
+    "3. TRUEFLOW QUANT ENGINE<br><b>Deterministic Math</b>",
+    "4. SETTLED LIQUIDITY<br><b>Approved Payment</b>",
+    "5. FLAGGED LEAKAGE<br><b>Quant Anomaly Blocked</b>"
 ]
 
-latest_leak = df.iloc[0]["Leakage (ZAR)"] if not df.empty else 0.0
+sources = [0, 1, 2, 2]
+targets = [1, 2, 3, 4]
+values  = [st.session_state.total_gross, st.session_state.total_gross, clean_flow, leakage_flow]
 
-flow_arcs = [
-    {"source": [29.210, -25.850], "target": [29.245, -25.850], "color": [56, 189, 248, 220]},
-    {"source": [29.245, -25.850], "target": [29.280, -25.850], "color": [129, 140, 248, 220]},
-    {"source": [29.280, -25.850], "target": [29.315, -25.825], "color": [16, 185, 129, 240]},
-]
+sankey_fig = go.Figure(data=[go.Sankey(
+    arrangement="fixed",
+    node=dict(
+        pad=28,
+        thickness=22,
+        line=dict(color="rgba(56, 189, 248, 0.8)", width=1.5),
+        label=node_labels,
+        x=[0.02, 0.26, 0.52, 0.88, 0.88],
+        y=[0.5, 0.5, 0.5, 0.25, 0.75],
+        color=["#38BDF8", "#818CF8", "#34D399", "#10B981", "#EF4444"]
+    ),
+    link=dict(
+        source=sources,
+        target=targets,
+        value=values,
+        color=[
+            "rgba(56, 189, 248, 0.25)",
+            "rgba(129, 140, 248, 0.25)",
+            "rgba(16, 185, 129, 0.35)",
+            "rgba(239, 68, 68, 0.45)"
+        ]
+    )
+)])
 
-if latest_leak > 0:
-    flow_arcs.append({"source": [29.280, -25.850], "target": [29.315, -25.875], "color": [239, 68, 68, 255]})
-
-nodes_df = pd.DataFrame(nodes_data)
-arcs_df = pd.DataFrame(flow_arcs)
-
-outer_ring_layer = pdk.Layer(
-    "ScatterplotLayer",
-    nodes_df,
-    get_position="coords",
-    get_fill_color="color",
-    get_radius=220,
-    opacity=0.25,
-    pickable=False
+sankey_fig.update_layout(
+    font=dict(size=12, color="#E2E8F0", family="JetBrains Mono"),
+    paper_bgcolor="rgba(15, 23, 42, 0.65)",
+    plot_bgcolor="rgba(0, 0, 0, 0)",
+    height=320,
+    margin=dict(l=15, r=15, t=25, b=15)
 )
 
-node_center_layer = pdk.Layer(
-    "ScatterplotLayer",
-    nodes_df,
-    get_position="coords",
-    get_fill_color="color",
-    get_radius=90,
-    opacity=0.95,
-    pickable=True
-)
-
-title_text_layer = pdk.Layer(
-    "TextLayer",
-    nodes_df,
-    get_position="coords",
-    get_text="name",
-    get_size=13,
-    get_color=[243, 244, 246],
-    get_pixel_offset=[0, -24],
-    get_text_anchor="'middle'",
-    get_alignment_baseline="'bottom'"
-)
-
-sub_text_layer = pdk.Layer(
-    "TextLayer",
-    nodes_df,
-    get_position="coords",
-    get_text="subtext",
-    get_size=11,
-    get_color=[148, 163, 184],
-    get_pixel_offset=[0, 24],
-    get_text_anchor="'middle'",
-    get_alignment_baseline="'top'"
-)
-
-arc_layer = pdk.Layer(
-    "ArcLayer",
-    arcs_df,
-    get_source_position="source",
-    get_target_position="target",
-    get_source_color="color",
-    get_target_color="color",
-    get_width=5,
-    auto_highlight=True
-)
-
-view_state = pdk.ViewState(
-    latitude=-25.850,
-    longitude=29.262,
-    zoom=11.6,
-    pitch=45,
-    bearing=-10
-)
-
-pydeck_map = pdk.Deck(
-    layers=[arc_layer, outer_ring_layer, node_center_layer, title_text_layer, sub_text_layer],
-    initial_view_state=view_state,
-    map_style="mapbox://styles/mapbox/dark-v10",
-    tooltip={"text": "{name}\n{subtext}"}
-)
-
-st.pydeck_chart(pydeck_map, height=320)
+st.plotly_chart(sankey_fig, use_container_width=True)
 
 # -----------------------------------------------------------------------------
-# 6. DYNAMICALLY ADJUSTING CHARTS & RECENT LEDGER
+# 6. DYNAMIC CHARTS & LIVE LEDGER
 # -----------------------------------------------------------------------------
 c_left, c_right = st.columns([1, 1])
 
@@ -369,3 +324,4 @@ if not df.empty:
         "Leakage (ZAR)": "R{:,.2f}"
     })
     st.dataframe(styled_df, use_container_width=True, height=280)
+        
