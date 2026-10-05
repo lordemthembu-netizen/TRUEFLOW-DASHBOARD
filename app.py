@@ -11,7 +11,7 @@ from datetime import datetime
 # -----------------------------------------------------------------------------
 st.set_page_config(
     page_title="TrueFlow // Cybernetic Assurance Terminal",
-    page_icon="âš¡",
+    page_icon="⚡",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -169,7 +169,7 @@ def generate_live_event():
 # -----------------------------------------------------------------------------
 # 3. SIDEBAR CONTROLS (DEFAULT UPDATE INTERVAL = 10 SECONDS)
 # -----------------------------------------------------------------------------
-st.sidebar.markdown("### âš¡ ENGINE CONTROL")
+st.sidebar.markdown("### ⚡ ENGINE CONTROL")
 run_simulation = st.sidebar.toggle("Stream Live Transactions", value=True)
 sim_speed = st.sidebar.slider("Update Interval (Seconds)", min_value=2, max_value=30, value=10, step=1)
 
@@ -217,18 +217,16 @@ st.markdown('<div class="cyber-section">1. AMBIENT CAPITAL & PHYSICAL FLOW DIAGR
 # -----------------------------------------------------------------------------
 # 5. RESTORED & CLEANED WEBGL ANIMATED NETWORK (NO OVERLAPPING TEXT)
 # -----------------------------------------------------------------------------
-# Nodes spaced widely with distinct coordinate offsets
 nodes_data = [
-    {"name": "1. WEIGHBRIDGE GATE", "subtext": "Physical Scale Reality", "coords": [29.210, -25.850], "color": [56, 189, 248], "y_offset": -22},
-    {"name": "2. DIGITAL LOG", "subtext": "Canonical Record", "coords": [29.245, -25.850], "color": [129, 140, 248], "y_offset": -22},
-    {"name": "3. TRUEFLOW QUANT ENGINE", "subtext": "Deterministic & Z-Score Math", "coords": [29.280, -25.850], "color": [52, 211, 153], "y_offset": -22},
-    {"name": "4. SETTLED LIQUIDITY", "subtext": "Clean Payment Approved", "coords": [29.315, -25.825], "color": [16, 185, 129], "y_offset": -22},
-    {"name": "5. LEAKAGE FLAGGED", "subtext": "Quant Anomaly Blocked", "coords": [29.315, -25.875], "color": [239, 68, 68], "y_offset": -22}
+    {"name": "1. WEIGHBRIDGE GATE", "subtext": "Physical Scale Reality", "coords": [29.210, -25.850], "color": [56, 189, 248]},
+    {"name": "2. DIGITAL LOG", "subtext": "Canonical Record", "coords": [29.245, -25.850], "color": [129, 140, 248]},
+    {"name": "3. TRUEFLOW QUANT ENGINE", "subtext": "Deterministic & Z-Score Math", "coords": [29.280, -25.850], "color": [52, 211, 153]},
+    {"name": "4. SETTLED LIQUIDITY", "subtext": "Clean Payment Approved", "coords": [29.315, -25.825], "color": [16, 185, 129]},
+    {"name": "5. LEAKAGE FLAGGED", "subtext": "Quant Anomaly Blocked", "coords": [29.315, -25.875], "color": [239, 68, 68]}
 ]
 
 latest_leak = df.iloc[0]["Leakage (ZAR)"] if not df.empty else 0.0
 
-# Light Arc Flow Trails between stages
 flow_arcs = [
     {"source": [29.210, -25.850], "target": [29.245, -25.850], "color": [56, 189, 248, 220]},
     {"source": [29.245, -25.850], "target": [29.280, -25.850], "color": [129, 140, 248, 220]},
@@ -241,7 +239,6 @@ if latest_leak > 0:
 nodes_df = pd.DataFrame(nodes_data)
 arcs_df = pd.DataFrame(flow_arcs)
 
-# Layer 1: Outer Glowing Node Rings
 outer_ring_layer = pdk.Layer(
     "ScatterplotLayer",
     nodes_df,
@@ -252,7 +249,6 @@ outer_ring_layer = pdk.Layer(
     pickable=False
 )
 
-# Layer 2: Solid Node Centers
 node_center_layer = pdk.Layer(
     "ScatterplotLayer",
     nodes_df,
@@ -263,7 +259,6 @@ node_center_layer = pdk.Layer(
     pickable=True
 )
 
-# Layer 3: Title Labels (Positioned cleanly above nodes)
 title_text_layer = pdk.Layer(
     "TextLayer",
     nodes_df,
@@ -276,111 +271,5 @@ title_text_layer = pdk.Layer(
     get_alignment_baseline="'bottom'"
 )
 
-# Layer 4: Subtitle Labels (Positioned cleanly below nodes)
-sub_text_layer = pdk.Layer(
-    "TextLayer",
-    nodes_df,
-    get_position="coords",
-    get_text="subtext",
-    get_size=11,
-    get_color=[148, 163, 184],
-    get_pixel_offset=[0, 24],
-    get_text_anchor="'middle'",
-    get_alignment_baseline="'top'"
-)
-
-# Layer 5: Dynamic Arc Trails
-arc_layer = pdk.Layer(
-    "ArcLayer",
-    arcs_df,
-    get_source_position="source",
-    get_target_position="target",
-    get_source_color="color",
-    get_target_color="color",
-    get_width=5,
-    auto_highlight=True
-)
-
-view_state = pdk.ViewState(
-    latitude=-25.850,
-    longitude=29.262,
-    zoom=11.6,
-    pitch=45,
-    bearing=-10
-)
-
-pydeck_map = pdk.Deck(
-    layers=[arc_layer, outer_ring_layer, node_center_layer, title_text_layer, sub_text_layer],
-    initial_view_state=view_state,
-    map_style="mapbox://styles/mapbox/dark-v10",
-    tooltip={"text": "{name}
-{subtext}"}
-)
-
-st.pydeck_chart(pydeck_map)
-
-# -----------------------------------------------------------------------------
-# 6. DYNAMICALLY ADJUSTING CHARTS & RECENT LEDGER
-# -----------------------------------------------------------------------------
-c_left, c_right = st.columns([1, 1])
-
-with c_left:
-    st.markdown('<div class="cyber-section">2. REAL-TIME EXPOSURE VOLATILITY</div>', unsafe_allow_html=True)
-    if not df.empty:
-        fig_line = px.line(
-            df[::-1],
-            x="Timestamp",
-            y="Leakage (ZAR)",
-            markers=True,
-            template="plotly_dark",
-            color_discrete_sequence=["#EF4444"]
-        )
-        fig_line.update_layout(
-            paper_bgcolor="rgba(15, 23, 42, 0.5)",
-            plot_bgcolor="rgba(0, 0, 0, 0)",
-            margin=dict(l=10, r=10, t=10, b=10),
-            height=280
-        )
-        st.plotly_chart(fig_line, use_container_width=True)
-
-with c_right:
-    st.markdown('<div class="cyber-section">3. ANOMALY CATEGORY DISTRIBUTION</div>', unsafe_allow_html=True)
-    if not df.empty:
-        fig_pie = px.pie(
-            df,
-            names="Anomaly",
-            values="Billed (ZAR)",
-            hole=0.55,
-            template="plotly_dark",
-            color_discrete_sequence=["#10B981", "#EF4444", "#F59E0B"]
-        )
-        fig_pie.update_layout(
-            paper_bgcolor="rgba(15, 23, 42, 0.5)",
-            plot_bgcolor="rgba(0, 0, 0, 0)",
-            margin=dict(l=10, r=10, t=10, b=10),
-            height=280
-        )
-        st.plotly_chart(fig_pie, use_container_width=True)
-
-st.markdown('<div class="cyber-section">4. LIVE TRANSACTION STREAM (AUTO-ADJUSTING LEDGER)</div>', unsafe_allow_html=True)
-
-# Custom row styling function
-def style_live_rows(row):
-    if row["Status"] == "EXPOSURE DETECTED":
-        return ['background-color: rgba(127, 29, 29, 0.45); color: #FCA5A5'] * len(row)
-    return ['background-color: rgba(6, 78, 59, 0.35); color: #6EE7B7'] * len(row)
-
-if not df.empty:
-    styled_df = df.style.apply(style_live_rows, axis=1)        .format({
-            "Scale Mass (t)": "{:.3f}",
-            "Billed Mass (t)": "{:.3f}",
-            "Expected (ZAR)": "R{:,.2f}",
-            "Billed (ZAR)": "R{:,.2f}",
-            "Leakage (ZAR)": "R{:,.2f}"
-        })
-    st.dataframe(styled_df, use_container_width=True, height=280)
-
-# 10-Second Continuous Execution Loop
-if run_simulation:
-    time.sleep(sim_speed)
-    st.rerun()
+sub_text_layer = pdk
+        
