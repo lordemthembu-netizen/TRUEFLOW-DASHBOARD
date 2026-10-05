@@ -5,7 +5,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 import time
 import os
-from datetime import datetime, timedelta
+from datetime import datetime
 
 # -----------------------------------------------------------------------------
 # 1. PAGE CONFIGURATION & ENTERPRISE DESIGN SYSTEM
@@ -130,12 +130,9 @@ SUPPLIERS = ["ABC Coal Pty Ltd", "Mpuma Haulage Logistics", "North Ridge Mineral
 TRUCKS = ["MP-1234-GP", "MP-4421-GP", "NW-8812-GP", "KZN-9012-GP", "LIM-3321-GP"]
 MATERIALS = ["RB1 Thermal Coal", "RB2 Export Coal", "Coking Coal", "Run of Mine (ROM)"]
 
-if 'transactions' not in st.session_state:
-    st.session_state.transactions = []
-    st.session_state.txn_counter = 1840
-    st.session_state.investigation_queue = {}
-
 def generate_synthetic_transaction():
+    if 'txn_counter' not in st.session_state:
+        st.session_state.txn_counter = 1840
     st.session_state.txn_counter += 1
     txn_id = f"TXN-2026-{st.session_state.txn_counter:06d}"
     
@@ -179,7 +176,7 @@ def generate_synthetic_transaction():
         grn_quantity = weighbridge_net
         inv_quantity = weighbridge_net
         inv_rate = approved_rate + float(np.random.choice([120.0, 185.0, 250.0]))
-        evidence_present = 6 # e.g. Missing Delivery Note Scan
+        evidence_present = 6 # Missing Delivery Note Scan
         anomaly_desc = "Price Variance / Creep"
 
     # Quantitative Metrics
@@ -260,13 +257,24 @@ def generate_synthetic_transaction():
     }
     return txn
 
-# Pre-populate session buffer if empty
-if not st.session_state.transactions:
+# -----------------------------------------------------------------------------
+# 3. SCHEMA-SAFE SESSION STATE INITIALIZATION
+# -----------------------------------------------------------------------------
+# Check and purge any stale V1 schema records from session memory
+if 'transactions' in st.session_state and len(st.session_state.transactions) > 0:
+    first_record = st.session_state.transactions[0]
+    if not isinstance(first_record, dict) or "transaction_id" not in first_record:
+        st.session_state.transactions = []
+
+if 'transactions' not in st.session_state or not st.session_state.transactions:
+    st.session_state.transactions = []
+    st.session_state.txn_counter = 1840
+    st.session_state.investigation_queue = {}
     for _ in range(35):
         st.session_state.transactions.append(generate_synthetic_transaction())
 
 # -----------------------------------------------------------------------------
-# 3. SIDEBAR NAVIGATION & CONTROLS
+# 4. SIDEBAR NAVIGATION & CONTROLS
 # -----------------------------------------------------------------------------
 st.sidebar.markdown("## 🛡️ TRUEFLOW")
 st.sidebar.caption("Transaction Assurance Platform v2.4")
@@ -297,31 +305,38 @@ st.sidebar.divider()
 st.sidebar.caption("Deterministic Rule Engine: **Active**")
 st.sidebar.caption("Statistical Baseline: **4,821 Historical Batches**")
 
-# Prepare Master DataFrame
+# Safely build DataFrame
 flat_data = []
 for t in st.session_state.transactions:
-    flat_data.append({
-        "Transaction ID": t["transaction_id"],
-        "Timestamp": t["timestamp"],
-        "Supplier": t["supplier"],
-        "Truck": t["truck_registration"],
-        "Material": t["material"],
-        "Trusted Mass (t)": t["weighbridge"]["net_t"],
-        "Invoiced Mass (t)": t["invoice"]["quantity_t"],
-        "Billed Rate (ZAR)": t["invoice"]["rate_zar"],
-        "Qty Variance (t)": t["metrics"]["qty_variance_t"],
-        "Potential Exposure (ZAR)": t["metrics"]["potential_exposure_zar"],
-        "Anomaly Score": t["metrics"]["anomaly_score"],
-        "Priority": t["metrics"]["priority"],
-        "Status": t["metrics"]["investigation_status"],
-        "Anomaly Type": t["metrics"]["anomaly_type"],
-        "Evidence %": t["metrics"]["evidence_completeness_pct"]
-    })
+    if isinstance(t, dict) and "transaction_id" in t:
+        flat_data.append({
+            "Transaction ID": t["transaction_id"],
+            "Timestamp": t["timestamp"],
+            "Supplier": t["supplier"],
+            "Truck": t["truck_registration"],
+            "Material": t["material"],
+            "Trusted Mass (t)": t["weighbridge"]["net_t"],
+            "Invoiced Mass (t)": t["invoice"]["quantity_t"],
+            "Billed Rate (ZAR)": t["invoice"]["rate_zar"],
+            "Qty Variance (t)": t["metrics"]["qty_variance_t"],
+            "Potential Exposure (ZAR)": t["metrics"]["potential_exposure_zar"],
+            "Anomaly Score": t["metrics"]["anomaly_score"],
+            "Priority": t["metrics"]["priority"],
+            "Status": t["metrics"]["investigation_status"],
+            "Anomaly Type": t["metrics"]["anomaly_type"],
+            "Evidence %": t["metrics"]["evidence_completeness_pct"]
+        })
 
 df = pd.DataFrame(flat_data)
 
+# Fallback if DataFrame empty
+if df.empty:
+    st.warning("Re-initializing transaction data engine...")
+    st.session_state.transactions = [generate_synthetic_transaction() for _ in range(35)]
+    st.rerun()
+
 # -----------------------------------------------------------------------------
-# 4. BRANDED ENTERPRISE HEADER
+# 5. BRANDED ENTERPRISE HEADER
 # -----------------------------------------------------------------------------
 st.markdown("""
 <div class="brand-header">
@@ -349,15 +364,15 @@ st.markdown("""
 # -----------------------------------------------------------------------------
 if nav_choice == " Executive Overview":
     
-    total_reconciled_zar = (df["Trusted Mass (t)"] * 1850.0).sum()
-    total_exposure_zar = df["Potential Exposure (ZAR)"].sum()
-    flagged_txns = len(df[df["Potential Exposure (ZAR)"] > 0])
-    avg_anomaly = df["Anomaly Score"].mean()
+    total_reconciled_zar = float((df["Trusted Mass (t)"] * 1850.0).sum())
+    total_exposure_zar = float(df["Potential Exposure (ZAR)"].sum())
+    flagged_txns = int(len(df[df["Potential Exposure (ZAR)"] > 0]))
+    avg_anomaly = float(df["Anomaly Score"].mean())
 
     m1, m2, m3, m4 = st.columns(4)
     m1.metric("Total Reconciled Value", f"R {total_reconciled_zar:,.2f}")
     m2.metric("Total Potential Exposure", f"R {total_exposure_zar:,.2f}", delta=f"{(total_exposure_zar/max(1, total_reconciled_zar))*100:.2f}% Risk Rate", delta_color="inverse")
-    m3.metric("Flagged Exceptions", f"{flagged_txns} / {len(df)}", delta=f"{priority_high := len(df[df['Priority'] == 'CRITICAL'])} Critical Priority", delta_color="inverse")
+    m3.metric("Flagged Exceptions", f"{flagged_txns} / {len(df)}", delta=f"{len(df[df['Priority'] == 'CRITICAL'])} Critical Priority", delta_color="inverse")
     m4.metric("Avg Fleet Anomaly Index", f"{avg_anomaly:.1f} / 100")
 
     st.markdown('<div class="app-section-title">EXPOSURE TREND & ANOMALY DISTRIBUTION</div>', unsafe_allow_html=True)
@@ -419,13 +434,11 @@ elif nav_choice == " Transaction Control Room":
     
     selected_txn_id = st.selectbox("Select Transaction ID for Reconstruction:", df["Transaction ID"].tolist())
     
-    # Locate transaction record
-    txn = next((t for t in st.session_state.transactions if t["transaction_id"] == selected_txn_id), None)
+    txn = next((t for t in st.session_state.transactions if isinstance(t, dict) and t.get("transaction_id") == selected_txn_id), None)
     
     if txn:
         m = txn["metrics"]
         
-        # Upper Details Summary
         info_col1, info_col2, info_col3, info_col4 = st.columns(4)
         info_col1.markdown(f"**Supplier:** {txn['supplier']}")
         info_col2.markdown(f"**Truck Reg:** `{txn['truck_registration']}`")
@@ -434,7 +447,6 @@ elif nav_choice == " Transaction Control Room":
         
         st.divider()
         
-        # 8-Stage Lineage Chain Display
         st.markdown("#### 🔗 Reconstructed Transaction Lineage (8 Representations)")
         
         l1, l2, l3, l4, l5, l6, l7, l8 = st.columns(8)
@@ -498,7 +510,6 @@ elif nav_choice == " Transaction Control Room":
 
         st.divider()
 
-        # Ground Truth vs Financial Claim Breakdown
         r1, r2 = st.columns([1, 1])
         
         with r1:
