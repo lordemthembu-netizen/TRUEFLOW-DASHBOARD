@@ -3,8 +3,6 @@ import pandas as pd
 import numpy as np
 import pydeck as pdk
 import plotly.express as px
-import plotly.graph_objects as go
-import time
 from datetime import datetime
 
 # -----------------------------------------------------------------------------
@@ -12,7 +10,7 @@ from datetime import datetime
 # -----------------------------------------------------------------------------
 st.set_page_config(
     page_title="TrueFlow // Cybernetic Assurance Terminal",
-    page_icon="âš¡",
+    page_icon="⚡",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -60,7 +58,6 @@ st.markdown("""
         padding: 18px;
         box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), inset 0 0 12px rgba(56, 189, 248, 0.05);
         backdrop-filter: blur(12px);
-        transition: all 0.4s ease;
     }
 
     div[data-testid="stMetric"]:hover {
@@ -108,15 +105,6 @@ st.markdown("""
         margin-bottom: 15px;
         border-left: 3px solid #38BDF8;
         padding-left: 12px;
-    }
-
-    /* Streamlit Flow Container Card */
-    .flow-card {
-        background: rgba(15, 23, 42, 0.6);
-        border: 1px solid rgba(56, 189, 248, 0.2);
-        box-shadow: inset 0 0 20px rgba(15, 23, 42, 0.8), 0 0 25px rgba(0, 0, 0, 0.5);
-        border-radius: 12px;
-        padding: 20px;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -177,21 +165,23 @@ def generate_live_event():
     st.session_state.total_exposure += leakage
 
 # -----------------------------------------------------------------------------
-# 3. SIDEBAR CONTROLS (DEFAULT UPDATE INTERVAL = 10 SECONDS)
+# 3. SIDEBAR CONTROLS & MANUAL/AUTO REFRESH
 # -----------------------------------------------------------------------------
-st.sidebar.markdown("### âš¡ ENGINE CONTROL")
+st.sidebar.markdown("### ⚡ ENGINE CONTROL")
 run_simulation = st.sidebar.toggle("Stream Live Transactions", value=True)
-sim_speed = st.sidebar.slider("Update Interval (Seconds)", min_value=2, max_value=30, value=10, step=1)
+
+if st.sidebar.button("Generate Next Event Step"):
+    generate_live_event()
 
 st.sidebar.divider()
 st.sidebar.markdown("**System Telemetry**")
-st.sidebar.caption("Refresh Frequency: 10s Cycle")
-st.sidebar.caption("Diagram Rendering: High-DPI Plotly Network Sankey")
+st.sidebar.caption("Status: Active Reconciler")
+st.sidebar.caption("Diagram Rendering: WebGL Ambient Network")
 
 # -----------------------------------------------------------------------------
 # 4. DASHBOARD HEADER & AMBIENT METRICS
 # -----------------------------------------------------------------------------
-st.markdown(f"""
+st.markdown("""
 <div class="ambient-header">
     <div style="display:flex; justify-content:space-between; align-items:center;">
         <div>
@@ -203,14 +193,13 @@ st.markdown(f"""
         <div style="text-align:right;">
             <span class="pulse-node"></span>
             <span style="font-family:'Orbitron'; color:#10B981; font-weight:700; font-size:0.88rem; margin-left:8px;">
-                10s LIVE CYCLE ACTIVE
+                LIVE STREAM ACTIVE
             </span>
         </div>
     </div>
 </div>
 """, unsafe_allow_html=True)
 
-# Generate a new event on every 10-second refresh cycle
 if run_simulation:
     generate_live_event()
 
@@ -222,67 +211,104 @@ col2.metric("Reconciled Liquidity", f"R{st.session_state.total_gross - st.sessio
 col3.metric("Flagged Exposure (Leakage)", f"R{st.session_state.total_exposure:,.2f}", delta=f"{(st.session_state.total_exposure/(st.session_state.total_gross+1e-5))*100:.2f}% Risk", delta_color="inverse")
 col4.metric("Engine Throughput", f"{len(st.session_state.transactions)} txns/buffer")
 
-st.markdown('<div class="cyber-section">1. AMBIENT CAPITAL & PHYSICAL FLOW DIAGRAM (NEON FLOW NETWORK)</div>', unsafe_allow_html=True)
-
 # -----------------------------------------------------------------------------
-# 5. HIGH-DPI ELEGANT SANKEY / FLOW NETWORK (NO OVERLAPPING TEXT)
+# 5. WEBGL ANIMATED NETWORK
 # -----------------------------------------------------------------------------
-latest_leak = df.iloc[0]["Leakage (ZAR)"] if not df.empty else 0.0
-clean_val = max(100.0, st.session_state.total_gross - st.session_state.total_exposure)
-leak_val = max(0.0, st.session_state.total_exposure)
+st.markdown('<div class="cyber-section">1. AMBIENT CAPITAL & PHYSICAL FLOW DIAGRAM</div>', unsafe_allow_html=True)
 
-# Node Definitions with Clean Multi-line Formatting to avoid text clipping
-node_labels = [
-    "<b>[01] WEIGHBRIDGE GATE</b><br>Physical Scale Reading",
-    "<b>[02] DIGITAL LOG</b><br>Immutable Evidence Record",
-    "<b>[03] RECONCILIATION ENGINE</b><br>Quant Rules & Math Check",
-    "<b>[04] VERIFIED SETTLEMENT</b><br>R0 Financial Leakage",
-    "<b>[05] FLAGGED LEAKAGE POOL</b><br>Quant Exposure Detected"
+nodes_data = [
+    {"name": "1. WEIGHBRIDGE GATE", "subtext": "Physical Scale Reality", "coords": [29.210, -25.850], "color": [56, 189, 248]},
+    {"name": "2. DIGITAL LOG", "subtext": "Canonical Record", "coords": [29.245, -25.850], "color": [129, 140, 248]},
+    {"name": "3. TRUEFLOW QUANT ENGINE", "subtext": "Deterministic & Z-Score Math", "coords": [29.280, -25.850], "color": [52, 211, 153]},
+    {"name": "4. SETTLED LIQUIDITY", "subtext": "Clean Payment Approved", "coords": [29.315, -25.825], "color": [16, 185, 129]},
+    {"name": "5. LEAKAGE FLAGGED", "subtext": "Quant Anomaly Blocked", "coords": [29.315, -25.875], "color": [239, 68, 68]}
 ]
 
-# Flow values
-sankey_fig = go.Figure(data=[go.Sankey(
-    arrangement="snap",
-    node=dict(
-        pad=35,
-        thickness=22,
-        line=dict(color="rgba(56, 189, 248, 0.6)", width=1.5),
-        label=node_labels,
-        color=[
-            "#38BDF8",  # Cyan (Weighbridge)
-            "#818CF8",  # Indigo (Digital Log)
-            "#34D399",  # Emerald (TrueFlow Engine)
-            "#10B981",  # Green (Verified)
-            "#EF4444"   # Red/Crimson (Leakage)
-        ],
-    ),
-    link=dict(
-        source=[0, 1, 2, 2],
-        target=[1, 2, 3, 4],
-        value=[
-            clean_val + leak_val,
-            clean_val + leak_val,
-            clean_val,
-            max(0.1, leak_val)
-        ],
-        color=[
-            "rgba(56, 189, 248, 0.28)",
-            "rgba(129, 140, 248, 0.28)",
-            "rgba(16, 185, 129, 0.45)",
-            "rgba(239, 68, 68, 0.60)" if latest_leak > 0 else "rgba(239, 68, 68, 0.15)"
-        ]
-    )
-)])
+latest_leak = df.iloc[0]["Leakage (ZAR)"] if not df.empty else 0.0
 
-sankey_fig.update_layout(
-    font=dict(family="JetBrains Mono, sans-serif", size=12, color="#F3F4F6"),
-    paper_bgcolor="rgba(15, 23, 42, 0.6)",
-    plot_bgcolor="rgba(0, 0, 0, 0)",
-    height=340,
-    margin=dict(l=25, r=25, t=20, b=20)
+flow_arcs = [
+    {"source": [29.210, -25.850], "target": [29.245, -25.850], "color": [56, 189, 248, 220]},
+    {"source": [29.245, -25.850], "target": [29.280, -25.850], "color": [129, 140, 248, 220]},
+    {"source": [29.280, -25.850], "target": [29.315, -25.825], "color": [16, 185, 129, 240]},
+]
+
+if latest_leak > 0:
+    flow_arcs.append({"source": [29.280, -25.850], "target": [29.315, -25.875], "color": [239, 68, 68, 255]})
+
+nodes_df = pd.DataFrame(nodes_data)
+arcs_df = pd.DataFrame(flow_arcs)
+
+outer_ring_layer = pdk.Layer(
+    "ScatterplotLayer",
+    nodes_df,
+    get_position="coords",
+    get_fill_color="color",
+    get_radius=220,
+    opacity=0.25,
+    pickable=False
 )
 
-st.plotly_chart(sankey_fig, use_container_width=True)
+node_center_layer = pdk.Layer(
+    "ScatterplotLayer",
+    nodes_df,
+    get_position="coords",
+    get_fill_color="color",
+    get_radius=90,
+    opacity=0.95,
+    pickable=True
+)
+
+title_text_layer = pdk.Layer(
+    "TextLayer",
+    nodes_df,
+    get_position="coords",
+    get_text="name",
+    get_size=13,
+    get_color=[243, 244, 246],
+    get_pixel_offset=[0, -24],
+    get_text_anchor="'middle'",
+    get_alignment_baseline="'bottom'"
+)
+
+sub_text_layer = pdk.Layer(
+    "TextLayer",
+    nodes_df,
+    get_position="coords",
+    get_text="subtext",
+    get_size=11,
+    get_color=[148, 163, 184],
+    get_pixel_offset=[0, 24],
+    get_text_anchor="'middle'",
+    get_alignment_baseline="'top'"
+)
+
+arc_layer = pdk.Layer(
+    "ArcLayer",
+    arcs_df,
+    get_source_position="source",
+    get_target_position="target",
+    get_source_color="color",
+    get_target_color="color",
+    get_width=5,
+    auto_highlight=True
+)
+
+view_state = pdk.ViewState(
+    latitude=-25.850,
+    longitude=29.262,
+    zoom=11.6,
+    pitch=45,
+    bearing=-10
+)
+
+pydeck_map = pdk.Deck(
+    layers=[arc_layer, outer_ring_layer, node_center_layer, title_text_layer, sub_text_layer],
+    initial_view_state=view_state,
+    map_style="mapbox://styles/mapbox/dark-v10",
+    tooltip={"text": "{name}\n{subtext}"}
+)
+
+st.pydeck_chart(pydeck_map, height=320)
 
 # -----------------------------------------------------------------------------
 # 6. DYNAMICALLY ADJUSTING CHARTS & RECENT LEDGER
@@ -329,23 +355,17 @@ with c_right:
 
 st.markdown('<div class="cyber-section">4. LIVE TRANSACTION STREAM (AUTO-ADJUSTING LEDGER)</div>', unsafe_allow_html=True)
 
-# Custom row styling function
 def style_live_rows(row):
     if row["Status"] == "EXPOSURE DETECTED":
         return ['background-color: rgba(127, 29, 29, 0.45); color: #FCA5A5'] * len(row)
     return ['background-color: rgba(6, 78, 59, 0.35); color: #6EE7B7'] * len(row)
 
 if not df.empty:
-    styled_df = df.style.apply(style_live_rows, axis=1)        .format({
-            "Scale Mass (t)": "{:.3f}",
-            "Billed Mass (t)": "{:.3f}",
-            "Expected (ZAR)": "R{:,.2f}",
-            "Billed (ZAR)": "R{:,.2f}",
-            "Leakage (ZAR)": "R{:,.2f}"
-        })
+    styled_df = df.style.apply(style_live_rows, axis=1).format({
+        "Scale Mass (t)": "{:.3f}",
+        "Billed Mass (t)": "{:.3f}",
+        "Expected (ZAR)": "R{:,.2f}",
+        "Billed (ZAR)": "R{:,.2f}",
+        "Leakage (ZAR)": "R{:,.2f}"
+    })
     st.dataframe(styled_df, use_container_width=True, height=280)
-
-# 10-Second Continuous Execution Loop
-if run_simulation:
-    time.sleep(sim_speed)
-    st.rerun()
