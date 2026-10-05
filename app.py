@@ -1,8 +1,9 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
+import pydeck as pdk
 import plotly.express as px
-import plotly.graph_objects as go
+import time
 from datetime import datetime
 
 # -----------------------------------------------------------------------------
@@ -18,93 +19,91 @@ st.set_page_config(
 # Custom Cyberpunk / Ambient Neon UI Styling
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;800;900&family=JetBrains+Mono:wght@300;400;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@300;500;700&display=swap');
 
-    html, body, [class*="css"] {
-        font-family: 'JetBrains Mono', monospace;
-    }
-
+    /* Main Container & Dark Space BG */
     .stApp {
-        background: radial-gradient(circle at 50% 10%, #0B1120 0%, #030712 100%);
-        color: #E2E8F0;
+        background: radial-gradient(circle at 50% 10%, #0d1527 0%, #030712 100%);
+        color: #e2e8f0;
+        font-family: 'JetBrains Mono', monospace;
     }
 
     /* Ambient Glow Header */
     .ambient-header {
-        background: linear-gradient(135deg, rgba(15, 23, 42, 0.8) 0%, rgba(3, 7, 18, 0.9) 100%);
-        border: 1px solid rgba(56, 189, 248, 0.25);
-        box-shadow: 0 0 30px rgba(56, 189, 248, 0.12), inset 0 0 20px rgba(16, 185, 129, 0.08);
-        backdrop-filter: blur(16px);
+        background: rgba(15, 23, 42, 0.6);
+        border: 1px solid rgba(56, 189, 248, 0.2);
+        box-shadow: 0 0 25px rgba(56, 189, 248, 0.15), inset 0 0 15px rgba(16, 185, 129, 0.1);
+        backdrop-filter: blur(12px);
         border-radius: 12px;
-        padding: 24px;
+        padding: 20px;
         margin-bottom: 25px;
     }
 
     .futuristic-title {
         font-family: 'Orbitron', sans-serif;
-        background: linear-gradient(90deg, #38BDF8 0%, #818CF8 50%, #34D399 100%);
+        background: linear-gradient(90deg, #38bdf8, #818cf8, #34d399);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         font-weight: 900;
-        letter-spacing: 2.5px;
+        letter-spacing: 2px;
         margin: 0;
     }
 
     /* KPI Glow Cards */
     div[data-testid="stMetric"] {
-        background: rgba(15, 23, 42, 0.65);
+        background: rgba(15, 23, 42, 0.7);
         border: 1px solid rgba(255, 255, 255, 0.08);
-        border-radius: 12px;
-        padding: 18px;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), inset 0 0 12px rgba(56, 189, 248, 0.05);
-        backdrop-filter: blur(12px);
+        border-radius: 10px;
+        padding: 15px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5), inset 0 0 10px rgba(56, 189, 248, 0.05);
+        backdrop-filter: blur(8px);
+        transition: all 0.3s ease;
     }
 
     div[data-testid="stMetric"]:hover {
-        border-color: rgba(56, 189, 248, 0.45);
-        box-shadow: 0 0 25px rgba(56, 189, 248, 0.2);
+        border-color: rgba(56, 189, 248, 0.4);
+        box-shadow: 0 0 20px rgba(56, 189, 248, 0.25);
     }
 
     div[data-testid="stMetric"] label {
-        color: #94A3B8 !important;
-        font-size: 0.78rem !important;
-        letter-spacing: 1.2px;
-        text-transform: uppercase;
+        color: #94a3b8 !important;
+        font-size: 0.75rem !important;
+        letter-spacing: 1px;
     }
 
     div[data-testid="stMetricValue"] {
-        color: #38BDF8 !important;
+        color: #38bdf8 !important;
         font-family: 'Orbitron', sans-serif;
-        font-size: 1.65rem !important;
-        text-shadow: 0 0 12px rgba(56, 189, 248, 0.4);
+        font-size: 1.6rem !important;
+        text-shadow: 0 0 10px rgba(56, 189, 248, 0.5);
     }
 
-    /* Live Pulse Indicator */
+    /* Live Data Pulse Indicator */
     .pulse-node {
         height: 10px;
         width: 10px;
-        background-color: #10B981;
+        background-color: #10b981;
         border-radius: 50%;
         display: inline-block;
-        box-shadow: 0 0 14px #10B981;
-        animation: pulse 2s infinite alternate;
+        box-shadow: 0 0 12px #10b981;
+        animation: pulse 1.5s infinite alternate;
     }
 
     @keyframes pulse {
-        0% { opacity: 0.3; transform: scale(0.85); }
-        100% { opacity: 1; transform: scale(1.35); }
+        0% { opacity: 0.3; transform: scale(0.8); }
+        100% { opacity: 1; transform: scale(1.3); }
     }
 
-    /* Section Titles */
+    /* Section Headers */
     .cyber-section {
         font-family: 'Orbitron', sans-serif;
-        font-size: 0.92rem;
-        color: #818CF8;
+        font-size: 0.95rem;
+        color: #818cf8;
         letter-spacing: 2px;
-        margin-top: 25px;
+        margin-top: 20px;
         margin-bottom: 15px;
-        border-left: 3px solid #38BDF8;
-        padding-left: 12px;
+        border-left: 3px solid #38bdf8;
+        padding-left: 10px;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -147,7 +146,7 @@ def generate_live_event():
 
     event = {
         "ID": txn_id,
-        "Timestamp": datetime.now().strftime("%H:%M:%S"),
+        "Timestamp": datetime.now().strftime("%H:%M:%S.%f")[:-3],
         "Scale Mass (t)": physical_mass,
         "Billed Mass (t)": billed_mass,
         "Expected (ZAR)": expected_val,
@@ -165,41 +164,40 @@ def generate_live_event():
     st.session_state.total_exposure += leakage
 
 # -----------------------------------------------------------------------------
-# 3. SIDEBAR CONTROLS
+# 3. SIDEBAR CONTROLS & LIVE TICKER ENGINE
 # -----------------------------------------------------------------------------
 st.sidebar.markdown("### ⚡ ENGINE CONTROL")
 run_simulation = st.sidebar.toggle("Stream Live Transactions", value=True)
-
-if st.sidebar.button("Generate Next Event Step"):
-    generate_live_event()
+sim_speed = st.sidebar.slider("Flow Interval (sec)", 0.5, 3.0, 1.0)
 
 st.sidebar.divider()
-st.sidebar.markdown("**System Telemetry**")
-st.sidebar.caption("Status: Active Reconciler")
-st.sidebar.caption("Diagram Rendering: Interactive Horizontal Sankey Flow")
+st.sidebar.markdown("**System Metrics**")
+st.sidebar.caption("Protocol: WebGL Animated Node Flow")
+st.sidebar.caption("Quantum Seed: Active")
 
 # -----------------------------------------------------------------------------
 # 4. DASHBOARD HEADER & AMBIENT METRICS
 # -----------------------------------------------------------------------------
-st.markdown("""
+st.markdown(f"""
 <div class="ambient-header">
     <div style="display:flex; justify-content:space-between; align-items:center;">
         <div>
             <h1 class="futuristic-title">TRUEFLOW // QUANT ASSURANCE TERMINAL</h1>
-            <p style="margin:6px 0 0 0; color:#94A3B8; font-size:0.88rem;">
+            <p style="margin:5px 0 0 0; color:#94a3b8; font-size:0.85rem;">
                 Autonomous Physical-to-Financial Liquidity Flow Reconciler
             </p>
         </div>
         <div style="text-align:right;">
             <span class="pulse-node"></span>
-            <span style="font-family:'Orbitron'; color:#10B981; font-weight:700; font-size:0.88rem; margin-left:8px;">
-                LIVE STREAM ACTIVE
+            <span style="font-family:'Orbitron'; color:#10b981; font-weight:700; font-size:0.9rem; margin-left:8px;">
+                LIVE TRANSACTION STREAMING
             </span>
         </div>
     </div>
 </div>
 """, unsafe_allow_html=True)
 
+# Generate a new record on cycle
 if run_simulation:
     generate_live_event()
 
@@ -211,62 +209,87 @@ col2.metric("Reconciled Liquidity", f"R{st.session_state.total_gross - st.sessio
 col3.metric("Flagged Exposure (Leakage)", f"R{st.session_state.total_exposure:,.2f}", delta=f"{(st.session_state.total_exposure/(st.session_state.total_gross+1e-5))*100:.2f}% Risk", delta_color="inverse")
 col4.metric("Engine Throughput", f"{len(st.session_state.transactions)} txns/buffer")
 
-# -----------------------------------------------------------------------------
-# 5. HORIZONTAL INTERACTIVE CAPITAL & PHYSICAL FLOW DIAGRAM
-# -----------------------------------------------------------------------------
-st.markdown('<div class="cyber-section">1. AMBIENT PHYSICAL-TO-FINANCIAL FLOW DIAGRAM</div>', unsafe_allow_html=True)
+st.markdown('<div class="cyber-section">1. AMBIENT CAPITAL & PHYSICAL FLOW DIAGRAM (ANIMATED NETWORK)</div>', unsafe_allow_html=True)
 
-clean_flow = st.session_state.total_gross - st.session_state.total_exposure
-leakage_flow = st.session_state.total_exposure if st.session_state.total_exposure > 0 else 1.0
-
-node_labels = [
-    "1. WEIGHBRIDGE GATE<br><b>Physical Scale Reality</b>",
-    "2. DIGITAL LOG<br><b>Canonical Record</b>",
-    "3. TRUEFLOW QUANT ENGINE<br><b>Deterministic Math</b>",
-    "4. SETTLED LIQUIDITY<br><b>Approved Payment</b>",
-    "5. FLAGGED LEAKAGE<br><b>Quant Anomaly Blocked</b>"
+# -----------------------------------------------------------------------------
+# 5. DYNAMIC WEBGL ANIMATED FLOW GRAPH (PyDeck)
+# -----------------------------------------------------------------------------
+# Define Node Network Coordinates
+nodes_data = [
+    {"name": "1. WEIGHBRIDGE GATE (Physical)", "coordinates": [29.23, -25.87], "color": [56, 189, 248]},
+    {"name": "2. DIGITIZED SCALE MEASUREMENT", "coordinates": [29.25, -25.86], "color": [52, 211, 153]},
+    {"name": "3. TRUEFLOW RECONCILIATION ENGINE", "coordinates": [29.27, -25.85], "color": [129, 140, 248]},
+    {"name": "4. SETTLED LIQUIDITY (Clean Pool)", "coordinates": [29.29, -25.84], "color": [16, 185, 129]},
+    {"name": "5. LEAKAGE EXPOSURE POOL (Flagged)", "coordinates": [29.29, -25.87], "color": [239, 68, 68]}
 ]
 
-sources = [0, 1, 2, 2]
-targets = [1, 2, 3, 4]
-values  = [st.session_state.total_gross, st.session_state.total_gross, clean_flow, leakage_flow]
+# Generate arcs/flows between nodes
+latest_leak = df.iloc[0]["Leakage (ZAR)"] if not df.empty else 0.0
 
-sankey_fig = go.Figure(data=[go.Sankey(
-    arrangement="fixed",
-    node=dict(
-        pad=28,
-        thickness=22,
-        line=dict(color="rgba(56, 189, 248, 0.8)", width=1.5),
-        label=node_labels,
-        x=[0.02, 0.26, 0.52, 0.88, 0.88],
-        y=[0.5, 0.5, 0.5, 0.25, 0.75],
-        color=["#38BDF8", "#818CF8", "#34D399", "#10B981", "#EF4444"]
-    ),
-    link=dict(
-        source=sources,
-        target=targets,
-        value=values,
-        color=[
-            "rgba(56, 189, 248, 0.25)",
-            "rgba(129, 140, 248, 0.25)",
-            "rgba(16, 185, 129, 0.35)",
-            "rgba(239, 68, 68, 0.45)"
-        ]
-    )
-)])
+flow_arcs = [
+    {"source": [29.23, -25.87], "target": [29.25, -25.86], "color": [56, 189, 248, 180]},
+    {"source": [29.25, -25.86], "target": [29.27, -25.85], "color": [52, 211, 153, 200]},
+    {"source": [29.27, -25.85], "target": [29.29, -25.84], "color": [16, 185, 129, 220]},
+]
 
-sankey_fig.update_layout(
-    font=dict(size=12, color="#E2E8F0", family="JetBrains Mono"),
-    paper_bgcolor="rgba(15, 23, 42, 0.65)",
-    plot_bgcolor="rgba(0, 0, 0, 0)",
-    height=320,
-    margin=dict(l=15, r=15, t=25, b=15)
+if latest_leak > 0:
+    flow_arcs.append({"source": [29.27, -25.85], "target": [29.29, -25.87], "color": [239, 68, 68, 255]})
+
+nodes_df = pd.DataFrame(nodes_data)
+arcs_df = pd.DataFrame(flow_arcs)
+
+# PyDeck WebGL Layer Definition
+node_layer = pdk.Layer(
+    "ScatterplotLayer",
+    nodes_df,
+    get_position="coordinates",
+    get_fill_color="color",
+    get_radius=180,
+    pickable=True
 )
 
-st.plotly_chart(sankey_fig, use_container_width=True)
+text_layer = pdk.Layer(
+    "TextLayer",
+    nodes_df,
+    get_position="coordinates",
+    get_text="name",
+    get_size=14,
+    get_color=[243, 244, 246],
+    get_angle=0,
+    get_text_anchor="'middle'",
+    get_alignment_baseline="'bottom'"
+)
+
+arc_layer = pdk.Layer(
+    "ArcLayer",
+    arcs_df,
+    get_source_position="source",
+    get_target_position="target",
+    get_source_color="color",
+    get_target_color="color",
+    get_width=6,
+    auto_highlight=True
+)
+
+view_state = pdk.ViewState(
+    latitude=-25.855,
+    longitude=29.26,
+    zoom=12.2,
+    pitch=50,
+    bearing=-20
+)
+
+r = pdk.Deck(
+    layers=[arc_layer, node_layer, text_layer],
+    initial_view_state=view_state,
+    map_style="mapbox://styles/mapbox/dark-v10",
+    tooltip={"text": "{name}"}
+)
+
+st.pydeck_chart(r)
 
 # -----------------------------------------------------------------------------
-# 6. DYNAMIC CHARTS & LIVE LEDGER
+# 6. DYNAMICALLY ADJUSTING CHARTS & RECENT LEDGER
 # -----------------------------------------------------------------------------
 c_left, c_right = st.columns([1, 1])
 
@@ -279,49 +302,55 @@ with c_left:
             y="Leakage (ZAR)",
             markers=True,
             template="plotly_dark",
-            color_discrete_sequence=["#EF4444"]
+            color_discrete_sequence=["#ef4444"]
         )
         fig_line.update_layout(
-            paper_bgcolor="rgba(15, 23, 42, 0.5)",
-            plot_bgcolor="rgba(0, 0, 0, 0)",
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)",
             margin=dict(l=10, r=10, t=10, b=10),
             height=280
         )
         st.plotly_chart(fig_line, use_container_width=True)
 
 with c_right:
-    st.markdown('<div class="cyber-section">3. ANOMALY CATEGORY DISTRIBUTION</div>', unsafe_allow_html=True)
+    st.markdown('<div class="cyber-section">3. ANOMALY FAMILY BREAKDOWN</div>', unsafe_allow_html=True)
     if not df.empty:
         fig_pie = px.pie(
             df,
             names="Anomaly",
             values="Billed (ZAR)",
-            hole=0.55,
+            hole=0.5,
             template="plotly_dark",
-            color_discrete_sequence=["#10B981", "#EF4444", "#F59E0B"]
+            color_discrete_sequence=["#10b981", "#ef4444", "#f59e0b"]
         )
         fig_pie.update_layout(
-            paper_bgcolor="rgba(15, 23, 42, 0.5)",
-            plot_bgcolor="rgba(0, 0, 0, 0)",
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)",
             margin=dict(l=10, r=10, t=10, b=10),
             height=280
         )
         st.plotly_chart(fig_pie, use_container_width=True)
 
-st.markdown('<div class="cyber-section">4. LIVE TRANSACTION STREAM (AUTO-ADJUSTING LEDGER)</div>', unsafe_allow_html=True)
+st.markdown('<div class="cyber-section">4. LIVE TRANSACTION STREAM (AUTO-ADJUSTING)</div>', unsafe_allow_html=True)
 
+# Custom row styling function
 def style_live_rows(row):
     if row["Status"] == "EXPOSURE DETECTED":
-        return ['background-color: rgba(127, 29, 29, 0.45); color: #FCA5A5'] * len(row)
-    return ['background-color: rgba(6, 78, 59, 0.35); color: #6EE7B7'] * len(row)
+        return ['background-color: rgba(127, 29, 29, 0.4); color: #fca5a5'] * len(row)
+    return ['background-color: rgba(6, 78, 59, 0.3); color: #6ee7b7'] * len(row)
 
 if not df.empty:
-    styled_df = df.style.apply(style_live_rows, axis=1).format({
-        "Scale Mass (t)": "{:.3f}",
-        "Billed Mass (t)": "{:.3f}",
-        "Expected (ZAR)": "R{:,.2f}",
-        "Billed (ZAR)": "R{:,.2f}",
-        "Leakage (ZAR)": "R{:,.2f}"
-    })
+    styled_df = df.style.apply(style_live_rows, axis=1)\
+        .format({
+            "Scale Mass (t)": "{:.3f}",
+            "Billed Mass (t)": "{:.3f}",
+            "Expected (ZAR)": "R{:,.2f}",
+            "Billed (ZAR)": "R{:,.2f}",
+            "Leakage (ZAR)": "R{:,.2f}"
+        })
     st.dataframe(styled_df, use_container_width=True, height=280)
-        
+
+# Rerun trigger for continuous ambient animation
+if run_simulation:
+    time.sleep(sim_speed)
+    st.rerun()
