@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import plotly.express as px
-import plotly.graph_objects as go
 import hashlib
 from datetime import datetime, timedelta
 
@@ -19,14 +18,11 @@ st.set_page_config(
 # Custom High-Contrast Dark Theme (Control-Room Aesthetic)
 st.markdown("""
 <style>
-    /* Main Background & Text */
     .stApp {
         background-color: #0B1120;
         color: #F8FAFC;
         font-family: 'Inter', -apple-system, sans-serif;
     }
-    
-    /* Header Container */
     .header-box {
         background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
         border: 1px solid #334155;
@@ -35,8 +31,6 @@ st.markdown("""
         margin-bottom: 24px;
         box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
     }
-    
-    /* Status Badges */
     .badge-live {
         background-color: #064E3B;
         color: #34D399;
@@ -45,9 +39,7 @@ st.markdown("""
         border-radius: 12px;
         font-size: 0.75rem;
         font-weight: 600;
-        letter-spacing: 0.05em;
     }
-    
     .badge-secure {
         background-color: #1E3A8A;
         color: #60A5FA;
@@ -56,10 +48,7 @@ st.markdown("""
         border-radius: 12px;
         font-size: 0.75rem;
         font-weight: 600;
-        letter-spacing: 0.05em;
     }
-    
-    /* KPI Card Component */
     .kpi-card {
         background-color: #0F172A;
         border: 1px solid #1E293B;
@@ -72,7 +61,6 @@ st.markdown("""
         font-size: 0.75rem;
         text-transform: uppercase;
         font-weight: 600;
-        letter-spacing: 0.05em;
         margin-bottom: 6px;
     }
     .kpi-value {
@@ -89,7 +77,6 @@ st.markdown("""
     .text-green { color: #10B981; }
     .text-blue { color: #38BDF8; }
 
-    /* Flow Step Box */
     .flow-step {
         background: #0F172A;
         border: 1px solid #334155;
@@ -105,17 +92,11 @@ st.markdown("""
         border: 2px solid #EF4444;
         background: #450A0A;
     }
-
-    /* Table & Container Overrides */
-    div[data-testid="stTable"] {
-        background-color: #0F172A;
-        border-radius: 8px;
-    }
 </style>
 """, unsafe_allow_html=True)
 
 # ==========================================
-# 2. MOCK DATA GENERATION ENGINE
+# 2. DATA GENERATION ENGINE
 # ==========================================
 @st.cache_data
 def load_transaction_dataset():
@@ -131,26 +112,23 @@ def load_transaction_dataset():
     for i in range(n_records):
         txn_id = f"TXN-2026-{4921 + i}"
         timestamp = (base_time + timedelta(minutes=i*45)).strftime("%Y-%m-%d %H:%M:%S")
-        supplier = np.random.choice(suppliers)
-        material = np.random.choice(materials)
-        truck = np.random.choice(trucks)
+        supplier = str(np.random.choice(suppliers))
+        material = str(np.random.choice(materials))
+        truck = str(np.random.choice(trucks))
         
         rate = 1850.0  # R/tonne
-        
-        # Physical Ground Truth from Weighbridge Scale
         po_mass = 40.0
-        weighbridge_mass = np.random.normal(37.5, 0.8) # Real physical mass
+        weighbridge_mass = float(np.random.normal(37.5, 0.8))
         
-        # Intentional Discrepancy Injection (Overbilling on Delivery Note/Invoice)
         is_exception = np.random.rand() < 0.22
         if is_exception:
-            billed_mass = weighbridge_mass + np.random.uniform(1.5, 3.5) # Claiming higher tonnage
-            exception_type = np.random.choice([
+            billed_mass = weighbridge_mass + float(np.random.uniform(1.5, 3.5))
+            exception_type = str(np.random.choice([
                 "Mass Discrepancy (Weighbridge vs. Invoice)",
                 "Price Variance / Unapproved Contract Rate",
                 "Duplicate Invoice Claim",
                 "Moisture Trigger / Quality Downgrade"
-            ], p=[0.5, 0.2, 0.15, 0.15])
+            ]))
             status = "Open Exception"
         else:
             billed_mass = weighbridge_mass
@@ -159,11 +137,7 @@ def load_transaction_dataset():
             
         qty_variance = billed_mass - weighbridge_mass
         potential_exposure = qty_variance * rate if qty_variance > 0 else 0.0
-        
-        # Cryptographic Hash Simulation
         sha_hash = hashlib.sha256(f"{txn_id}{weighbridge_mass}{billed_mass}".encode()).hexdigest()[:16]
-        
-        # Statistical Anomaly Z-Score
         z_score = round(float(np.abs((qty_variance - 0.1) / 0.25)), 2) if is_exception else round(float(np.random.uniform(0.1, 0.8)), 2)
         
         data.append({
@@ -188,18 +162,17 @@ def load_transaction_dataset():
 
 df_txns = load_transaction_dataset()
 
-# Initialize Session State for Investigation Queue Updates
 if 'investigations' not in st.session_state:
     st.session_state.investigations = {}
 
 # ==========================================
-# 3. EXECUTIVE HEADER & CONTROLS
+# 3. EXECUTIVE HEADER
 # ==========================================
 st.markdown("""
 <div class="header-box">
     <div style="display: flex; justify-content: space-between; align-items: center;">
         <div>
-            <h1 style="margin: 0; font-size: 1.8rem; color: #F8FAFC; letter-spacing: -0.02em;">
+            <h1 style="margin: 0; font-size: 1.8rem; color: #F8FAFC;">
                 🛡️ TRUEFLOW <span style="font-size: 1rem; color: #38BDF8; font-weight: 400;">| TRANSACTION ASSURANCE PLATFORM</span>
             </h1>
             <p style="margin: 4px 0 0 0; color: #94A3B8; font-size: 0.85rem;">
@@ -210,16 +183,13 @@ st.markdown("""
             <span class="badge-live">SCALE TELEMETRY: LIVE</span> &nbsp;
             <span class="badge-secure">SAP S/4HANA CONNECTED</span> &nbsp;
             <span class="badge-secure">SHA-256 PROVENANCE: ACTIVE</span>
-            <p style="margin: 6px 0 0 0; font-size: 0.75rem; color: #64748B;">
-                PRIMARY NODE: AMATOLA REGIONAL LOGISTICS HUB, SOUTH AFRICA
-            </p>
         </div>
     </div>
 </div>
 """, unsafe_allow_html=True)
 
 # ==========================================
-# 4. EXECUTIVE SUMMARY METRICS & KPIS
+# 4. EXECUTIVE KPIS
 # ==========================================
 st.markdown("### Executive Overview & Financial Metrics")
 
@@ -227,24 +197,14 @@ total_audited = len(df_txns)
 total_reconciled_val = (df_txns["Weighbridge_Mass_t"] * df_txns["Approved_Rate_ZAR"]).sum()
 total_potential_exposure = df_txns["Potential_Exposure_ZAR"].sum()
 active_exceptions = len(df_txns[df_txns["Status"] == "Open Exception"])
-evidence_coverage = 99.4  # %
+evidence_coverage = 99.4
 
 c1, c2, c3, c4, c5 = st.columns(5)
-
-with c1:
-    st.markdown(f'<div class="kpi-card"><div class="kpi-title">Transactions Audited</div><div class="kpi-value">{total_audited:,}</div><div class="kpi-subtitle text-blue">100% Ingested Streams</div></div>', unsafe_allow_html=True)
-
-with c2:
-    st.markdown(f'<div class="kpi-card"><div class="kpi-title">Value Reconciled</div><div class="kpi-value">R {total_reconciled_val/1e6:.2f}M</div><div class="kpi-subtitle text-green">✓ Verified Ground Truth</div></div>', unsafe_allow_html=True)
-
-with c3:
-    st.markdown(f'<div class="kpi-card"><div class="kpi-title">Potential Financial Exposure</div><div class="kpi-value text-red">R {total_potential_exposure:,.2f}</div><div class="kpi-subtitle text-red">⚠ Unresolved Discrepancies</div></div>', unsafe_allow_html=True)
-
-with c4:
-    st.markdown(f'<div class="kpi-card"><div class="kpi-title">Active Exception Queue</div><div class="kpi-value text-red">{active_exceptions}</div><div class="kpi-subtitle text-blue">Requires Human Review</div></div>', unsafe_allow_html=True)
-
-with c5:
-    st.markdown(f'<div class="kpi-card"><div class="kpi-title">Evidence Coverage</div><div class="kpi-value text-green">{evidence_coverage}%</div><div class="kpi-subtitle text-green">6/6 Documents/Txn</div></div>', unsafe_allow_html=True)
+c1.markdown(f'<div class="kpi-card"><div class="kpi-title">Transactions Audited</div><div class="kpi-value">{total_audited:,}</div><div class="kpi-subtitle text-blue">100% Ingested Streams</div></div>', unsafe_allow_html=True)
+c2.markdown(f'<div class="kpi-card"><div class="kpi-title">Value Reconciled</div><div class="kpi-value">R {total_reconciled_val/1e6:.2f}M</div><div class="kpi-subtitle text-green">✓ Verified Ground Truth</div></div>', unsafe_allow_html=True)
+c3.markdown(f'<div class="kpi-card"><div class="kpi-title">Potential Financial Exposure</div><div class="kpi-value text-red">R {total_potential_exposure:,.2f}</div><div class="kpi-subtitle text-red">⚠ Unresolved Discrepancies</div></div>', unsafe_allow_html=True)
+c4.markdown(f'<div class="kpi-card"><div class="kpi-title">Active Exception Queue</div><div class="kpi-value text-red">{active_exceptions}</div><div class="kpi-subtitle text-blue">Requires Human Review</div></div>', unsafe_allow_html=True)
+c5.markdown(f'<div class="kpi-card"><div class="kpi-title">Evidence Coverage</div><div class="kpi-value text-green">{evidence_coverage}%</div><div class="kpi-subtitle text-green">6/6 Documents/Txn</div></div>', unsafe_allow_html=True)
 
 st.divider()
 
@@ -259,56 +219,33 @@ tab_control, tab_evidence, tab_supplier, tab_investigation = st.tabs([
 ])
 
 # ------------------------------------------
-# TAB 1: TRANSACTION CONTROL ROOM
+# TAB 1: CONTROL ROOM
 # ------------------------------------------
 with tab_control:
     st.subheader("Transaction Stream Ledger & Real-Time Inspection")
-    st.write("Click any transaction in the ledger below to analyze its 7-stage lineage and physical-to-financial reconciliation.")
-    
-    # Selected Transaction Selector
-    selected_txn_id = st.selectbox(
-        "Select Transaction for Deep Forensic Analysis:",
-        options=df_txns["Transaction_ID"].tolist(),
-        index=0
-    )
-    
+    selected_txn_id = st.selectbox("Select Transaction for Deep Forensic Analysis:", options=df_txns["Transaction_ID"].tolist(), index=0)
     txn = df_txns[df_txns["Transaction_ID"] == selected_txn_id].iloc[0]
     
-    # 7-Stage Transaction Process Flow
     st.markdown("#### 7-Stage Transaction Process Flow")
-    
     f1, f2, f3, f4, f5, f6, f7 = st.columns(7)
     
-    with f1:
-        st.markdown(f'<div class="flow-step"><div style="font-size:0.7rem; color:#94A3B8;">1. PO ISSUED</div><div style="font-weight:700; font-size:0.9rem;">{txn["PO_Mass_t"]:.2f} t</div><div style="font-size:0.65rem; color:#38BDF8;">R1,850 / t</div></div>', unsafe_allow_html=True)
-        
-    with f2:
-        st.markdown(f'<div class="flow-step"><div style="font-size:0.7rem; color:#94A3B8;">2. DISPATCH</div><div style="font-weight:700; font-size:0.9rem;">{txn["PO_Mass_t"]:.2f} t</div><div style="font-size:0.65rem; color:#94A3B8;">Gate Out</div></div>', unsafe_allow_html=True)
+    f1.markdown(f'<div class="flow-step"><div style="font-size:0.7rem; color:#94A3B8;">1. PO ISSUED</div><div style="font-weight:700; font-size:0.9rem;">{txn["PO_Mass_t"]:.2f} t</div><div style="font-size:0.65rem; color:#38BDF8;">R1,850 / t</div></div>', unsafe_allow_html=True)
+    f2.markdown(f'<div class="flow-step"><div style="font-size:0.7rem; color:#94A3B8;">2. DISPATCH</div><div style="font-weight:700; font-size:0.9rem;">{txn["PO_Mass_t"]:.2f} t</div><div style="font-size:0.65rem; color:#94A3B8;">Gate Out</div></div>', unsafe_allow_html=True)
+    f3.markdown(f'<div class="flow-step flow-step-trusted"><div style="font-size:0.7rem; color:#34D399; font-weight:700;">3. WEIGHBRIDGE</div><div style="font-weight:700; font-size:1.0rem; color:#34D399;">{txn["Weighbridge_Mass_t"]:.2f} t</div><div style="font-size:0.65rem; color:#34D399;">✓ TRUSTED SCALE</div></div>', unsafe_allow_html=True)
 
-    with f3:
-        st.markdown(f'<div class="flow-step flow-step-trusted"><div style="font-size:0.7rem; color:#34D399; font-weight:700;">3. WEIGHBRIDGE</div><div style="font-weight:700; font-size:1.0rem; color:#34D399;">{txn["Weighbridge_Mass_t"]:.2f} t</div><div style="font-size:0.65rem; color:#34D399;">✓ TRUSTED SCALE</div></div>', unsafe_allow_html=True)
+    is_warn = txn['Qty_Variance_t'] > 0
+    step_class = "flow-step-flagged" if is_warn else "flow-step"
+    badge_text = '⚠ Discrepancy' if is_warn else '✓ Matched'
+    badge_color = '#EF4444' if is_warn else '#10B981'
+    f4.markdown(f'<div class="{step_class}"><div style="font-size:0.7rem; color:#94A3B8;">4. DELIVERY NOTE</div><div style="font-weight:700; font-size:0.9rem;">{txn["Billed_Mass_t"]:.2f} t</div><div style="font-size:0.65rem; color:{badge_color};">{badge_text}</div></div>', unsafe_allow_html=True)
 
-    with f4:
-        is_warn = txn['Qty_Variance_t'] > 0
-        step_class = "flow-step-flagged" if is_warn else "flow-step"
-        badge_text = '⚠ Discrepancy' if is_warn else '✓ Matched'
-        badge_color = '#EF4444' if is_warn else '#10B981'
-        st.markdown(f'<div class="{step_class}"><div style="font-size:0.7rem; color:#94A3B8;">4. DELIVERY NOTE</div><div style="font-weight:700; font-size:0.9rem;">{txn["Billed_Mass_t"]:.2f} t</div><div style="font-size:0.65rem; color:{badge_color};">{badge_text}</div></div>', unsafe_allow_html=True)
-
-    with f5:
-        st.markdown(f'<div class="flow-step"><div style="font-size:0.7rem; color:#94A3B8;">5. GRN</div><div style="font-weight:700; font-size:0.9rem;">{txn["Billed_Mass_t"]:.2f} t</div><div style="font-size:0.65rem; color:#94A3B8;">Warehouse Sync</div></div>', unsafe_allow_html=True)
-
-    with f6:
-        st.markdown(f'<div class="flow-step"><div style="font-size:0.7rem; color:#94A3B8;">6. TAX INVOICE</div><div style="font-weight:700; font-size:0.9rem;">R {txn["Billed_Mass_t"]*txn["Approved_Rate_ZAR"]:,.2f}</div><div style="font-size:0.65rem; color:#94A3B8;">Vendor Claim</div></div>', unsafe_allow_html=True)
-
-    with f7:
-        st.markdown(f'<div class="flow-step"><div style="font-size:0.7rem; color:#94A3B8;">7. SETTLEMENT</div><div style="font-weight:700; font-size:0.9rem;">R {txn["Weighbridge_Mass_t"]*txn["Approved_Rate_ZAR"]:,.2f}</div><div style="font-size:0.65rem; color:#10B981;">Reconciled Pay</div></div>', unsafe_allow_html=True)
+    f5.markdown(f'<div class="flow-step"><div style="font-size:0.7rem; color:#94A3B8;">5. GRN</div><div style="font-weight:700; font-size:0.9rem;">{txn["Billed_Mass_t"]:.2f} t</div><div style="font-size:0.65rem; color:#94A3B8;">Warehouse Sync</div></div>', unsafe_allow_html=True)
+    f6.markdown(f'<div class="flow-step"><div style="font-size:0.7rem; color:#94A3B8;">6. TAX INVOICE</div><div style="font-weight:700; font-size:0.9rem;">R {txn["Billed_Mass_t"]*txn["Approved_Rate_ZAR"]:,.2f}</div><div style="font-size:0.65rem; color:#94A3B8;">Vendor Claim</div></div>', unsafe_allow_html=True)
+    f7.markdown(f'<div class="flow-step"><div style="font-size:0.7rem; color:#94A3B8;">7. SETTLEMENT</div><div style="font-weight:700; font-size:0.9rem;">R {txn["Weighbridge_Mass_t"]*txn["Approved_Rate_ZAR"]:,.2f}</div><div style="font-size:0.65rem; color:#10B981;">Reconciled Pay</div></div>', unsafe_allow_html=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
     
-    # Detailed Reconciliation Breakdown
     col_left, col_right = st.columns([1, 1])
-    
     with col_left:
         st.markdown("#### Physical vs Financial Reconciliation")
         z_desc = "HIGH ANOMALY" if txn['Z_Score'] > 2.0 else "NORMAL"
@@ -346,8 +283,6 @@ with tab_control:
 # ------------------------------------------
 with tab_evidence:
     st.subheader(f"Evidence Audit Trail for Transaction: {selected_txn_id}")
-    st.write("Trace extracted values back to source documents, field-level confidence scores, and cryptographic hashes.")
-    
     e1, e2 = st.columns([1, 1])
     
     with e1:
@@ -364,19 +299,19 @@ with tab_evidence:
 
     with e2:
         st.markdown("#### Cryptographic SHA-256 Provenance & Verification")
-        st.code(f"""
-[CRYPTOGRAPHIC PROVENANCE MANIFEST]
-Transaction ID : {selected_txn_id}
-Hardware Anchor: Scale #04 (Amatola Hub Weighbridge)
-Timestamp      : {txn['Timestamp']}
-Scale Payload  : {txn['Weighbridge_Mass_t']} t
-SHA-256 Hash   : {txn['SHA256_Hash']}
-
-[VERIFICATION RESULT]
-✓ Hardware Security Module (HSM) Signature: VALID
-✓ Document Lineage Integrity: 6/6 Documents Verified
-✓ Immutable Audit Log Entry Created
-        """, language="yaml")
+        st.code(
+            f"[CRYPTOGRAPHIC PROVENANCE MANIFEST]\n"
+            f"Transaction ID : {selected_txn_id}\n"
+            f"Hardware Anchor: Scale #04 (Amatola Hub Weighbridge)\n"
+            f"Timestamp      : {txn['Timestamp']}\n"
+            f"Scale Payload  : {txn['Weighbridge_Mass_t']} t\n"
+            f"SHA-256 Hash   : {txn['SHA256_Hash']}\n\n"
+            f"[VERIFICATION RESULT]\n"
+            f"✓ Hardware Security Module Signature: VALID\n"
+            f"✓ Document Lineage Integrity: 6/6 Documents Verified\n"
+            f"✓ Immutable Audit Log Entry Created",
+            language="yaml"
+        )
 
 # ------------------------------------------
 # TAB 3: SUPPLIER RISK INTELLIGENCE
@@ -384,10 +319,9 @@ SHA-256 Hash   : {txn['SHA256_Hash']}
 with tab_supplier:
     st.subheader("Statistical Supplier Risk & Overbilling Profiles")
     
-    # Calculate Supplier Behavioral Statistics
     supp_stats = df_txns.groupby("Supplier").agg(
         Total_Txns=("Transaction_ID", "count"),
-        Total_Exceptions=("Potential_Exposure_ZAR", lambda x: (x > 0).sum()),
+        Total_Exceptions=("Potential_Exposure_ZAR", lambda x: int((x > 0).sum())),
         Total_Potential_Exposure=("Potential_Exposure_ZAR", "sum"),
         Avg_Qty_Variance=("Qty_Variance_t", "mean")
     ).reset_index()
@@ -395,7 +329,6 @@ with tab_supplier:
     supp_stats["Exception_Rate_%"] = round((supp_stats["Total_Exceptions"] / supp_stats["Total_Txns"]) * 100, 2)
     
     s_col1, s_col2 = st.columns([1, 1])
-    
     with s_col1:
         st.markdown("#### Historical Supplier Overbilling Rankings")
         st.dataframe(supp_stats.sort_values(by="Total_Potential_Exposure", ascending=False), use_container_width=True)
@@ -434,16 +367,26 @@ with tab_investigation:
             st.markdown(f"**Exception Classification:** {inv_item['Exception_Type']}")
             
         with ic2:
-            current_status = st.session_state.investigations.get(inv_txn_id, {}).get("status", "Open / Under Review")
-            
             new_status = st.selectbox(
                 "Update Investigation Status:",
                 ["Open / Under Review", "Validated Exception (Credit Note Issued)", "Closed (Legitimate Adjustment)", "Closed (Measurement Error)"],
                 index=0
             )
-            
-            audit_note = st.text_area("Auditor Escalation Notes:", placeholder="e.g., Contacted supplier CFO regarding weighbridge discrepancy. Credit note requested for R3,700.")
+            audit_note = st.text_area("Auditor Escalation Notes:", placeholder="e.g., Contacted supplier CFO regarding weighbridge discrepancy.")
             
             if st.button("Submit Audit Decision to Immutable Log"):
-                st.session_state.investigations[inv_txn_id] = {
-   
+                record = {
+                    "status": new_status,
+                    "note": audit_note,
+                    "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                }
+                st.session_state.investigations[str(inv_txn_id)] = record
+                st.success(f"Audit record updated for {inv_txn_id}. Transaction status changed to '{new_status}'.")
+
+    st.divider()
+    st.markdown("#### Logged Audit Trail History")
+    if len(st.session_state.investigations) > 0:
+        st.json(st.session_state.investigations)
+    else:
+        st.info("No manual audit updates recorded yet in this session.")
+    
