@@ -1,5 +1,71 @@
 import streamlit as st
 import pandas as pd
+
+def render_transaction_control_room(txn_id: str):
+    st.subheader(f"Transaction Control Room: {txn_id}")
+    
+    # 1. Pipeline Flow Visualization
+    st.markdown("### Transaction Process Flow")
+    cols = st.columns(7)
+    stages = [
+        ("PO", "40.00 t", "R1,850/t"),
+        ("Dispatch", "40.00 t", "—"),
+        ("Weighbridge", "37.20 t", "✓ TRUSTED"),
+        ("Delivery Note", "39.20 t", "⚠ Variance"),
+        ("GRN", "39.20 t", "—"),
+        ("Invoice", "39.20 t", "R72,520"),
+        ("Payment", "R72,520", "Pending")
+    ]
+    
+    for col, (stage_name, val, subtext) in zip(cols, stages):
+        with col:
+            st.metric(label=stage_name, value=val, delta=subtext, delta_color="inverse" if "⚠" in subtext else "normal")
+
+    st.divider()
+
+    # 2. Reconciliation Engine Breakdown
+    col_left, col_right = st.columns([1, 1])
+
+    with col_left:
+        st.markdown("#### Physical vs Financial Reconciliation")
+        
+        recon_df = pd.DataFrame({
+            "Metric": ["Trusted Mass (Weighbridge)", "Billed Mass (Invoice/DN)", "Quantity Variance", "Approved Contract Rate", "Potential Exposure"],
+            "Value": ["37.20 t", "39.20 t", "+2.00 t (+5.38%)", "R 1,850 / t", "R 3,700.00"]
+        })
+        st.table(recon_df)
+        
+        st.warning("⚠ ANOMALY DETECTED: Variance exceeds 3σ historical baseline for ABC Coal Mining Pty Ltd.")
+
+    with col_right:
+        st.markdown("#### Audit & Evidence Lineage")
+        st.write("Confidence Scores & Extracted Verification:")
+        
+        docs = [
+            {"Doc": "Purchase Order", "ID": "PO-10482", "Confidence": "99.7%", "Status": "Verified"},
+            {"Doc": "Digital Weighbridge Log", "ID": "WB-77821", "Confidence": "99.9%", "Status": "Verified (Trusted Anchor)"},
+            {"Doc": "Delivery Note", "ID": "DN-55291", "Confidence": "97.8%", "Status": "Discrepancy"},
+            {"Doc": "Goods Received Note", "ID": "GRN-99182", "Confidence": "98.2%", "Status": "Verified"},
+            {"Doc": "Tax Invoice", "ID": "INV-88172", "Confidence": "99.1%", "Status": "Flagged"}
+        ]
+        st.dataframe(pd.DataFrame(docs), use_container_width=True)
+
+    st.divider()
+
+    # 3. Investigation & Action Queue Entry
+    st.markdown("#### Action & Decision Logging")
+    c1, c2, c3 = st.columns([1, 1, 2])
+    with c1:
+        status = st.selectbox("Update Status", ["Open / Under Review", "Validated Exception", "Recovered / Settled", "Closed (Explained)"])
+    with c2:
+        priority = st.selectbox("Priority", ["HIGH", "MEDIUM", "LOW"])
+    with c3:
+        comment = st.text_input("Audit Note / Investigation Reason", placeholder="e.g., Escalated to supplier for weight adjustment credit note...")
+        
+    if st.button("Submit Decision to Immutable Ledger"):
+        st.success(f"Transaction {txn_id} updated to '{status}'. Audit trail logged.")
+        import streamlit as st
+import pandas as pd
 import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
