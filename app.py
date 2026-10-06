@@ -232,49 +232,19 @@ evidence_coverage = 99.4  # %
 c1, c2, c3, c4, c5 = st.columns(5)
 
 with c1:
-    st.markdown(f"""
-    <div class="kpi-card">
-        <div class="kpi-title">Transactions Audited</div>
-        <div class="kpi-value">{total_audited:,}</div>
-        <div class="kpi-subtitle text-blue">100% Ingested Streams</div>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown(f'<div class="kpi-card"><div class="kpi-title">Transactions Audited</div><div class="kpi-value">{total_audited:,}</div><div class="kpi-subtitle text-blue">100% Ingested Streams</div></div>', unsafe_allow_html=True)
 
 with c2:
-    st.markdown(f"""
-    <div class="kpi-card">
-        <div class="kpi-title">Value Reconciled</div>
-        <div class="kpi-value">R {total_reconciled_val/1e6:.2f}M</div>
-        <div class="kpi-subtitle text-green">✓ Verified Ground Truth</div>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown(f'<div class="kpi-card"><div class="kpi-title">Value Reconciled</div><div class="kpi-value">R {total_reconciled_val/1e6:.2f}M</div><div class="kpi-subtitle text-green">✓ Verified Ground Truth</div></div>', unsafe_allow_html=True)
 
 with c3:
-    st.markdown(f"""
-    <div class="kpi-card">
-        <div class="kpi-title">Potential Financial Exposure</div>
-        <div class="kpi-value text-red">R {total_potential_exposure:,.2f}</div>
-        <div class="kpi-subtitle text-red">⚠ Unresolved Discrepancies</div>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown(f'<div class="kpi-card"><div class="kpi-title">Potential Financial Exposure</div><div class="kpi-value text-red">R {total_potential_exposure:,.2f}</div><div class="kpi-subtitle text-red">⚠ Unresolved Discrepancies</div></div>', unsafe_allow_html=True)
 
 with c4:
-    st.markdown(f"""
-    <div class="kpi-card">
-        <div class="kpi-title">Active Exception Queue</div>
-        <div class="kpi-value text-red">{active_exceptions}</div>
-        <div class="kpi-subtitle text-blue">Requires Human Review</div>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown(f'<div class="kpi-card"><div class="kpi-title">Active Exception Queue</div><div class="kpi-value text-red">{active_exceptions}</div><div class="kpi-subtitle text-blue">Requires Human Review</div></div>', unsafe_allow_html=True)
 
 with c5:
-    st.markdown(f"""
-    <div class="kpi-card">
-        <div class="kpi-title">Evidence Coverage</div>
-        <div class="kpi-value text-green">{evidence_coverage}%</div>
-        <div class="kpi-subtitle text-green">6/6 Documents/Txn</div>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown(f'<div class="kpi-card"><div class="kpi-title">Evidence Coverage</div><div class="kpi-value text-green">{evidence_coverage}%</div><div class="kpi-subtitle text-green">6/6 Documents/Txn</div></div>', unsafe_allow_html=True)
 
 st.divider()
 
@@ -310,69 +280,29 @@ with tab_control:
     f1, f2, f3, f4, f5, f6, f7 = st.columns(7)
     
     with f1:
-        st.markdown(f"""
-        <div class="flow-step">
-            <div style="font-size:0.7rem; color:#94A3B8;">1. PO ISSUED</div>
-            <div style="font-weight:700; font-size:0.9rem;">{txn['PO_Mass_t']:.2f} t</div>
-            <div style="font-size:0.65rem; color:#38BDF8;">R1,850 / t</div>
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown(f'<div class="flow-step"><div style="font-size:0.7rem; color:#94A3B8;">1. PO ISSUED</div><div style="font-weight:700; font-size:0.9rem;">{txn["PO_Mass_t"]:.2f} t</div><div style="font-size:0.65rem; color:#38BDF8;">R1,850 / t</div></div>', unsafe_allow_html=True)
         
     with f2:
-        st.markdown(f"""
-        <div class="flow-step">
-            <div style="font-size:0.7rem; color:#94A3B8;">2. DISPATCH</div>
-            <div style="font-weight:700; font-size:0.9rem;">{txn['PO_Mass_t']:.2f} t</div>
-            <div style="font-size:0.65rem; color:#94A3B8;">Gate Out</div>
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown(f'<div class="flow-step"><div style="font-size:0.7rem; color:#94A3B8;">2. DISPATCH</div><div style="font-weight:700; font-size:0.9rem;">{txn["PO_Mass_t"]:.2f} t</div><div style="font-size:0.65rem; color:#94A3B8;">Gate Out</div></div>', unsafe_allow_html=True)
 
     with f3:
-        st.markdown(f"""
-        <div class="flow-step flow-step-trusted">
-            <div style="font-size:0.7rem; color:#34D399; font-weight:700;">3. WEIGHBRIDGE</div>
-            <div style="font-weight:700; font-size:1.0rem; color:#34D399;">{txn['Weighbridge_Mass_t']:.2f} t</div>
-            <div style="font-size:0.65rem; color:#34D399;">✓ TRUSTED SCALE</div>
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown(f'<div class="flow-step flow-step-trusted"><div style="font-size:0.7rem; color:#34D399; font-weight:700;">3. WEIGHBRIDGE</div><div style="font-weight:700; font-size:1.0rem; color:#34D399;">{txn["Weighbridge_Mass_t"]:.2f} t</div><div style="font-size:0.65rem; color:#34D399;">✓ TRUSTED SCALE</div></div>', unsafe_allow_html=True)
 
     with f4:
         is_warn = txn['Qty_Variance_t'] > 0
         step_class = "flow-step-flagged" if is_warn else "flow-step"
-        st.markdown(f"""
-        <div class="{step_class}">
-            <div style="font-size:0.7rem; color:#94A3B8;">4. DELIVERY NOTE</div>
-            <div style="font-weight:700; font-size:0.9rem;">{txn['Billed_Mass_t']:.2f} t</div>
-            <div style="font-size:0.65rem; color:{'#EF4444' if is_warn else '#10B981'};">{'⚠ Discrepancy' if is_warn else '✓ Matched'}</div>
-        </div>
-        """, unsafe_allow_html=True)
+        badge_text = '⚠ Discrepancy' if is_warn else '✓ Matched'
+        badge_color = '#EF4444' if is_warn else '#10B981'
+        st.markdown(f'<div class="{step_class}"><div style="font-size:0.7rem; color:#94A3B8;">4. DELIVERY NOTE</div><div style="font-weight:700; font-size:0.9rem;">{txn["Billed_Mass_t"]:.2f} t</div><div style="font-size:0.65rem; color:{badge_color};">{badge_text}</div></div>', unsafe_allow_html=True)
 
     with f5:
-        st.markdown(f"""
-        <div class="flow-step">
-            <div style="font-size:0.7rem; color:#94A3B8;">5. GRN</div>
-            <div style="font-weight:700; font-size:0.9rem;">{txn['Billed_Mass_t']:.2f} t</div>
-            <div style="font-size:0.65rem; color:#94A3B8;">Warehouse Sync</div>
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown(f'<div class="flow-step"><div style="font-size:0.7rem; color:#94A3B8;">5. GRN</div><div style="font-weight:700; font-size:0.9rem;">{txn["Billed_Mass_t"]:.2f} t</div><div style="font-size:0.65rem; color:#94A3B8;">Warehouse Sync</div></div>', unsafe_allow_html=True)
 
     with f6:
-        st.markdown(f"""
-        <div class="flow-step">
-            <div style="font-size:0.7rem; color:#94A3B8;">6. TAX INVOICE</div>
-            <div style="font-weight:700; font-size:0.9rem;">R {txn['Billed_Mass_t']*txn['Approved_Rate_ZAR']:,.2f}</div>
-            <div style="font-size:0.65rem; color:#94A3B8;">Vendor Claim</div>
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown(f'<div class="flow-step"><div style="font-size:0.7rem; color:#94A3B8;">6. TAX INVOICE</div><div style="font-weight:700; font-size:0.9rem;">R {txn["Billed_Mass_t"]*txn["Approved_Rate_ZAR"]:,.2f}</div><div style="font-size:0.65rem; color:#94A3B8;">Vendor Claim</div></div>', unsafe_allow_html=True)
 
     with f7:
-        st.markdown(f"""
-        <div class="flow-step">
-            <div style="font-size:0.7rem; color:#94A3B8;">7. SETTLEMENT</div>
-            <div style="font-weight:700; font-size:0.9rem;">R {txn['Weighbridge_Mass_t']*txn['Approved_Rate_ZAR']:,.2f}</div>
-            <div style="font-size:0.65rem; color:#10B981;">Reconciled Pay</div>
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown(f'<div class="flow-step"><div style="font-size:0.7rem; color:#94A3B8;">7. SETTLEMENT</div><div style="font-weight:700; font-size:0.9rem;">R {txn["Weighbridge_Mass_t"]*txn["Approved_Rate_ZAR"]:,.2f}</div><div style="font-size:0.65rem; color:#10B981;">Reconciled Pay</div></div>', unsafe_allow_html=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
     
@@ -381,6 +311,7 @@ with tab_control:
     
     with col_left:
         st.markdown("#### Physical vs Financial Reconciliation")
+        z_desc = "HIGH ANOMALY" if txn['Z_Score'] > 2.0 else "NORMAL"
         recon_data = {
             "Metric Parameter": [
                 "Trusted Physical Mass (Digital Scale Telemetry)",
@@ -397,7 +328,7 @@ with tab_control:
                 f"+{txn['Qty_Variance_t']:.2f} t" if txn['Qty_Variance_t'] > 0 else "0.00 t",
                 f"R {txn['Approved_Rate_ZAR']:,.2f} / t",
                 f"R {txn['Potential_Exposure_ZAR']:,.2f}",
-                f"{txn['Z_Score']} σ ({'HIGH ANOMALY' if txn['Z_Score'] > 2.0 else 'NORMAL'})",
+                f"{txn['Z_Score']} σ ({z_desc})",
                 txn['Exception_Type']
             ]
         }
@@ -405,11 +336,6 @@ with tab_control:
         
     with col_right:
         st.markdown("#### Transaction Stream Summary Ledger")
-        
-        # Color formatted dataframe
-        def highlight_exceptions(row):
-            return ['background-color: #450A0A; color: #F8FAFC' if row['Potential_Exposure_ZAR'] > 0 else '' for _ in row]
-
         st.dataframe(
             df_txns[["Transaction_ID", "Supplier", "Material", "Weighbridge_Mass_t", "Billed_Mass_t", "Potential_Exposure_ZAR", "Status"]].head(10),
             use_container_width=True
@@ -505,4 +431,19 @@ with tab_investigation:
             st.markdown(f"**Selected Transaction:** `{inv_txn_id}`")
             st.markdown(f"**Supplier:** {inv_item['Supplier']}")
             st.markdown(f"**Calculated Exposure:** :red[R {inv_item['Potential_Exposure_ZAR']:,.2f}]")
-            st.markdown(f"
+            st.markdown(f"**Exception Classification:** {inv_item['Exception_Type']}")
+            
+        with ic2:
+            current_status = st.session_state.investigations.get(inv_txn_id, {}).get("status", "Open / Under Review")
+            
+            new_status = st.selectbox(
+                "Update Investigation Status:",
+                ["Open / Under Review", "Validated Exception (Credit Note Issued)", "Closed (Legitimate Adjustment)", "Closed (Measurement Error)"],
+                index=0
+            )
+            
+            audit_note = st.text_area("Auditor Escalation Notes:", placeholder="e.g., Contacted supplier CFO regarding weighbridge discrepancy. Credit note requested for R3,700.")
+            
+            if st.button("Submit Audit Decision to Immutable Log"):
+                st.session_state.investigations[inv_txn_id] = {
+   
