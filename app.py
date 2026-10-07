@@ -57,7 +57,8 @@ def make_transaction(i, mode=None):
     approved=40.0
     
     if mode is None: 
-        mode=rng.choice(['clean','clean','clean','clean','qty','qty','price','duplicate','missing','identity'],p=[.43,.08,.08,.08,.14,.08,.05,.06,.05,.03])
+        # Corrected probabilities so p sums exactly to 1.0
+        mode=rng.choice(['clean','clean','clean','clean','qty','qty','price','duplicate','missing','identity'],p=[.40,.08,.08,.08,.12,.08,.05,.05,.03,.03])
         
     wb=dn=grn=inv_qty=base
     inv_rate=rate
@@ -339,6 +340,4 @@ else:
             st.success(f'{selected} updated to: {decision}')
             st.rerun()
     else:
-        st.info("No active exceptions requiring review.")
-        
-    st.capti
+        st.info("No 
