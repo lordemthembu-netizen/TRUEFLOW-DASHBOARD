@@ -2,391 +2,343 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import plotly.express as px
-import hashlib
 from datetime import datetime, timedelta
 
 # ==========================================
-# 1. PAGE CONFIGURATION & DARK THEME STYLING
+# 1. PAGE CONFIG & DARK THEME CONTROL ROOM
 # ==========================================
-st.set_page_config(
-    page_title="TrueFlow // Enterprise Transaction Assurance Platform",
-    page_icon="🛡️",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
+st.set_page_config(page_title='TRUEFLOW | Transaction Assurance', page_icon='🛡️', layout='wide')
 
-# Custom High-Contrast Dark Theme (Control-Room Aesthetic)
-st.markdown("""
-<style>
-    .stApp {
-        background-color: #0B1120;
-        color: #F8FAFC;
-        font-family: 'Inter', -apple-system, sans-serif;
-    }
-    .header-box {
-        background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
-        border: 1px solid #334155;
-        border-radius: 10px;
-        padding: 20px 24px;
-        margin-bottom: 24px;
-        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
-    }
-    .badge-live {
-        background-color: #064E3B;
-        color: #34D399;
-        border: 1px solid #059669;
-        padding: 3px 10px;
-        border-radius: 12px;
-        font-size: 0.75rem;
-        font-weight: 600;
-    }
-    .badge-secure {
-        background-color: #1E3A8A;
-        color: #60A5FA;
-        border: 1px solid #2563EB;
-        padding: 3px 10px;
-        border-radius: 12px;
-        font-size: 0.75rem;
-        font-weight: 600;
-    }
-    .kpi-card {
-        background-color: #0F172A;
-        border: 1px solid #1E293B;
-        border-radius: 8px;
-        padding: 16px;
-        text-align: left;
-    }
-    .kpi-title {
-        color: #94A3B8;
-        font-size: 0.75rem;
-        text-transform: uppercase;
-        font-weight: 600;
-        margin-bottom: 6px;
-    }
-    .kpi-value {
-        color: #F8FAFC;
-        font-size: 1.5rem;
-        font-weight: 700;
-        margin-bottom: 4px;
-    }
-    .kpi-subtitle {
-        font-size: 0.75rem;
-        font-weight: 500;
-    }
-    .text-red { color: #EF4444; }
-    .text-green { color: #10B981; }
-    .text-blue { color: #38BDF8; }
-
-    .flow-step {
-        background: #0F172A;
-        border: 1px solid #334155;
-        border-radius: 6px;
-        padding: 12px;
-        text-align: center;
-    }
-    .flow-step-trusted {
-        border: 2px solid #10B981;
-        background: #022C22;
-    }
-    .flow-step-flagged {
-        border: 2px solid #EF4444;
-        background: #450A0A;
-    }
-</style>
-""", unsafe_allow_html=True)
+st.markdown('''<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap');
+html,body,[class*="css"]{font-family:Inter,sans-serif}
+.stApp{background:radial-gradient(circle at 10% 0%,rgba(35,92,160,.13),transparent 28%),radial-gradient(circle at 90% 5%,rgba(0,190,150,.08),transparent 24%),#070c16;color:#e7edf7}
+.block-container{padding-top:1.2rem;max-width:1500px}
+.tf-header{border:1px solid #1d304c;border-radius:14px;padding:22px 24px;background:linear-gradient(135deg,#0c1525,#101b2c);box-shadow:0 12px 35px rgba(0,0,0,.25)}
+.tf-brand{font-size:27px;font-weight:800}
+.tf-brand span{color:#35b8ff}
+.tf-sub{color:#8190a6;font-size:13px;margin-top:5px}
+.pill{display:inline-block;padding:5px 9px;border-radius:999px;font-family:'JetBrains Mono';font-size:10px;margin:3px 5px 0 0;border:1px solid #29415f;background:#0b1727;color:#8fa4be}
+.pill.green{color:#56e3b2;border-color:#1c6853}
+.pill.blue{color:#63c8ff;border-color:#225a83}
+.pill.amber{color:#ffd36b;border-color:#735b1e}
+.section{font-size:17px;font-weight:800;margin:24px 0 12px;border-left:3px solid #28b9ff;padding-left:10px}
+.card{border:1px solid #1b2b43;border-radius:12px;padding:14px;background:#0b1321;min-height:100px}
+.card-label{color:#7e8ca1;font-size:10px;text-transform:uppercase;letter-spacing:.7px}
+.card-value{font-family:'JetBrains Mono';font-size:24px;font-weight:700;margin-top:7px}
+.card-note{font-size:10px;color:#687990;margin-top:4px}
+.red{color:#ff6577!important}
+.green{color:#54e0b0!important}
+.blue{color:#5cc7ff!important}
+.amber{color:#ffd36b!important}
+.stage{border:1px solid #1e2e46;border-radius:10px;padding:11px 8px;background:#0b1422;min-height:88px;text-align:center}
+.stage-title{font-size:9px;color:#77879d;text-transform:uppercase}
+.stage-value{font-family:'JetBrains Mono';font-size:16px;margin-top:8px}
+.stage-note{font-size:9px;color:#4dbf9c;margin-top:4px}
+.alert-high{border-left:4px solid #ff5269;background:#1a0f17;padding:12px;border-radius:8px}
+.alert-clean{border-left:4px solid #43d5a5;background:#0c1715;padding:12px;border-radius:8px}
+.smallmono{font-family:'JetBrains Mono';font-size:11px}
+</style>''', unsafe_allow_html=True)
 
 # ==========================================
-# 2. DATA GENERATION ENGINE
+# 2. SYNTHETIC TRANSACTION GENERATOR
 # ==========================================
+SUPPLIERS=['ABC Coal Mining Pty Ltd','Mpuma Haulage Logistics','Khai-Appel Mining Corp','North Ridge Minerals','Vanguard Bulk Rail']
+MATERIALS=['RB1 Thermal Coal','RB2 Thermal Coal','Coking Coal','Iron Ore Fines','Chrome Ore Concentrate']
+TRUCKS=['MP-1234-GP','LIM-3321-GP','FS-7711-GP','MP-4421-GP','KZN-9012-GP','MP-6789-GP']
+
+def make_transaction(i, mode=None):
+    rng=np.random.default_rng(1000+i)
+    supplier=SUPPLIERS[i%5]
+    material=MATERIALS[i%5]
+    truck=TRUCKS[i%6]
+    base=round(float(rng.uniform(34.5,39.8)),2)
+    rate=float(rng.choice([1650,1750,1850,1950,2100]))
+    approved=40.0
+    
+    if mode is None: 
+        mode=rng.choice(['clean','clean','clean','clean','qty','qty','price','duplicate','missing','identity'],p=[.43,.08,.08,.08,.14,.08,.05,.06,.05,.03])
+        
+    wb=dn=grn=inv_qty=base
+    inv_rate=rate
+    duplicate=missing=identity=False
+    
+    if mode=='qty': 
+        dn=round(base+rng.uniform(1,3),2)
+        grn=inv_qty=dn
+    elif mode=='price': 
+        inv_rate=round(rate*rng.uniform(1.03,1.09),2)
+    elif mode=='duplicate': 
+        duplicate=True
+    elif mode=='missing': 
+        missing=True
+    elif mode=='identity': 
+        identity=True
+        
+    invoice=round(inv_qty*inv_rate,2)
+    payment=round(invoice*(2 if duplicate else 1),2)
+    qty_exp=max(0,inv_qty-wb)*rate
+    price_exp=max(0,inv_rate-rate)*inv_qty
+    dup_exp=invoice if duplicate else 0
+    exposure=round(qty_exp+price_exp+dup_exp,2)
+    var_pct=((inv_qty-wb)/wb*100) if wb else 0
+    baseline=max(.12,.16+(i%5)*.05)
+    z=abs(var_pct-baseline)/.35 if var_pct else abs(baseline)/.35
+    score=round(min(99,max(1,35+abs(var_pct)*8+(35 if duplicate else 0)+(25 if price_exp else 0)+(15 if missing else 0)+(10 if identity else 0))))
+    
+    status='CLEAN'
+    priority='LOW'
+    classification='None'
+    
+    if duplicate: status,priority,classification='EXCEPTION','HIGH','Duplicate billing risk'
+    elif qty_exp>0: status,priority,classification='EXCEPTION','HIGH','Quantity discrepancy'
+    elif price_exp>0: status,priority,classification='EXCEPTION','HIGH','Price variance'
+    elif identity: status,priority,classification='EXCEPTION','MEDIUM','Identity / truck mismatch'
+    elif missing: status,priority,classification='EXCEPTION','MEDIUM','Missing evidence'
+    
+    return {
+        'transaction_id':f'TXN-2026-{4921+i:04d}',
+        'timestamp':datetime.now()-timedelta(minutes=(150-i)*4),
+        'supplier':supplier,
+        'truck':truck,
+        'material':material,
+        'po_number':f'PO-{10480+i}',
+        'approved_qty_t':approved,
+        'approved_rate':rate,
+        'dispatch_t':approved,
+        'weighbridge_t':wb,
+        'delivery_note_t':dn,
+        'grn_t':grn,
+        'invoice_qty_t':inv_qty,
+        'invoice_rate':inv_rate,
+        'invoice_amount':invoice,
+        'payment_amount':payment,
+        'qty_exposure':round(qty_exp,2),
+        'price_exposure':round(price_exp,2),
+        'duplicate_exposure':round(dup_exp,2),
+        'potential_exposure':exposure,
+        'variance_t':round(inv_qty-wb,2),
+        'variance_pct':round(var_pct,2),
+        'baseline_pct':round(baseline,2),
+        'z_score':round(z,2),
+        'anomaly_score':score,
+        'evidence_present':7-(1 if missing else 0),
+        'evidence_total':7,
+        'status':status,
+        'priority':priority,
+        'classification':classification,
+        'duplicate':duplicate,
+        'missing_evidence':missing,
+        'identity_mismatch':identity
+    }
+
 @st.cache_data
-def load_transaction_dataset():
-    np.random.seed(42)
-    n_records = 150
-    suppliers = ["ABC Coal Mining Pty Ltd", "Mpuma Haulage Logistics", "Khai-Appel Mining Corp", "North Ridge Minerals", "Vanguard Bulk Rail"]
-    materials = ["RB1 Thermal Coal (Export Grade)", "RB2 Thermal Coal", "Chrome Ore Concentrate", "Iron Ore Fines", "Coking Coal Grade A"]
-    trucks = ["KZN-9012-GP", "MP-1234-GP", "LIM-3321-GP", "FS-7711-GP", "MP-9921-GP"]
-    
-    data = []
-    base_time = datetime.now() - timedelta(days=5)
-    
-    for i in range(n_records):
-        txn_id = f"TXN-2026-{4921 + i}"
-        timestamp = (base_time + timedelta(minutes=i*45)).strftime("%Y-%m-%d %H:%M:%S")
-        supplier = str(np.random.choice(suppliers))
-        material = str(np.random.choice(materials))
-        truck = str(np.random.choice(trucks))
-        
-        rate = 1850.0  # R/tonne
-        po_mass = 40.0
-        weighbridge_mass = float(np.random.normal(37.5, 0.8))
-        
-        is_exception = np.random.rand() < 0.22
-        if is_exception:
-            billed_mass = weighbridge_mass + float(np.random.uniform(1.5, 3.5))
-            exception_type = str(np.random.choice([
-                "Mass Discrepancy (Weighbridge vs. Invoice)",
-                "Price Variance / Unapproved Contract Rate",
-                "Duplicate Invoice Claim",
-                "Moisture Trigger / Quality Downgrade"
-            ]))
-            status = "Open Exception"
-        else:
-            billed_mass = weighbridge_mass
-            exception_type = "None (Matched)"
-            status = "Reconciled"
-            
-        qty_variance = billed_mass - weighbridge_mass
-        potential_exposure = qty_variance * rate if qty_variance > 0 else 0.0
-        sha_hash = hashlib.sha256(f"{txn_id}{weighbridge_mass}{billed_mass}".encode()).hexdigest()[:16]
-        z_score = round(float(np.abs((qty_variance - 0.1) / 0.25)), 2) if is_exception else round(float(np.random.uniform(0.1, 0.8)), 2)
-        
-        data.append({
-            "Transaction_ID": txn_id,
-            "Timestamp": timestamp,
-            "Supplier": supplier,
-            "Truck": truck,
-            "Material": material,
-            "PO_Mass_t": po_mass,
-            "Weighbridge_Mass_t": round(weighbridge_mass, 2),
-            "Billed_Mass_t": round(billed_mass, 2),
-            "Qty_Variance_t": round(qty_variance, 2),
-            "Approved_Rate_ZAR": rate,
-            "Potential_Exposure_ZAR": round(potential_exposure, 2),
-            "Z_Score": z_score,
-            "Exception_Type": exception_type,
-            "Status": status,
-            "SHA256_Hash": sha_hash
-        })
-        
-    return pd.DataFrame(data)
+def build_data():
+    forced={4:'qty',8:'price',13:'duplicate',19:'missing',27:'identity',34:'qty',42:'price',56:'duplicate',73:'qty',91:'missing',112:'price',127:'qty'}
+    return pd.DataFrame([make_transaction(i,forced.get(i)) for i in range(150)])
 
-df_txns = load_transaction_dataset()
+df=build_data()
 
-if 'investigations' not in st.session_state:
-    st.session_state.investigations = {}
+# Session State Initializations
+if 'investigation' not in st.session_state: 
+    st.session_state.investigation={}
+if 'selected_txn' not in st.session_state: 
+    st.session_state.selected_txn=df.iloc[4].transaction_id
 
-# ==========================================
-# 3. EXECUTIVE HEADER
-# ==========================================
-st.markdown("""
-<div class="header-box">
-    <div style="display: flex; justify-content: space-between; align-items: center;">
-        <div>
-            <h1 style="margin: 0; font-size: 1.8rem; color: #F8FAFC;">
-                🛡️ TRUEFLOW <span style="font-size: 1rem; color: #38BDF8; font-weight: 400;">| TRANSACTION ASSURANCE PLATFORM</span>
-            </h1>
-            <p style="margin: 4px 0 0 0; color: #94A3B8; font-size: 0.85rem;">
-                Autonomous Physical-to-Financial Exposure Intelligence & Multi-Document Provenance
-            </p>
-        </div>
-        <div style="text-align: right;">
-            <span class="badge-live">SCALE TELEMETRY: LIVE</span> &nbsp;
-            <span class="badge-secure">SAP S/4HANA CONNECTED</span> &nbsp;
-            <span class="badge-secure">SHA-256 PROVENANCE: ACTIVE</span>
-        </div>
-    </div>
-</div>
-""", unsafe_allow_html=True)
+# Header Banner
+st.markdown('''<div class="tf-header"><div class="tf-brand">🛡️ TRUE<span>FLOW</span> <span style="font-size:12px;color:#6f86a1">| TRANSACTION ASSURANCE</span></div><div class="tf-sub">AI-powered physical-to-financial transaction assurance</div><div><span class="pill green">DEMO DATA</span><span class="pill blue">QUANTITATIVE ENGINE: ACTIVE</span><span class="pill blue">EVIDENCE PROVENANCE: ACTIVE</span><span class="pill amber">HUMAN REVIEW REQUIRED</span></div></div>''',unsafe_allow_html=True)
 
-# ==========================================
-# 4. EXECUTIVE KPIS
-# ==========================================
-st.markdown("### Executive Overview & Financial Metrics")
-
-total_audited = len(df_txns)
-total_reconciled_val = (df_txns["Weighbridge_Mass_t"] * df_txns["Approved_Rate_ZAR"]).sum()
-total_potential_exposure = df_txns["Potential_Exposure_ZAR"].sum()
-active_exceptions = len(df_txns[df_txns["Status"] == "Open Exception"])
-evidence_coverage = 99.4
-
-c1, c2, c3, c4, c5 = st.columns(5)
-c1.markdown(f'<div class="kpi-card"><div class="kpi-title">Transactions Audited</div><div class="kpi-value">{total_audited:,}</div><div class="kpi-subtitle text-blue">100% Ingested Streams</div></div>', unsafe_allow_html=True)
-c2.markdown(f'<div class="kpi-card"><div class="kpi-title">Value Reconciled</div><div class="kpi-value">R {total_reconciled_val/1e6:.2f}M</div><div class="kpi-subtitle text-green">✓ Verified Ground Truth</div></div>', unsafe_allow_html=True)
-c3.markdown(f'<div class="kpi-card"><div class="kpi-title">Potential Financial Exposure</div><div class="kpi-value text-red">R {total_potential_exposure:,.2f}</div><div class="kpi-subtitle text-red">⚠ Unresolved Discrepancies</div></div>', unsafe_allow_html=True)
-c4.markdown(f'<div class="kpi-card"><div class="kpi-title">Active Exception Queue</div><div class="kpi-value text-red">{active_exceptions}</div><div class="kpi-subtitle text-blue">Requires Human Review</div></div>', unsafe_allow_html=True)
-c5.markdown(f'<div class="kpi-card"><div class="kpi-title">Evidence Coverage</div><div class="kpi-value text-green">{evidence_coverage}%</div><div class="kpi-subtitle text-green">6/6 Documents/Txn</div></div>', unsafe_allow_html=True)
-
-st.divider()
-
-# ==========================================
-# 5. NAVIGATION TABS
-# ==========================================
-tab_control, tab_evidence, tab_supplier, tab_investigation = st.tabs([
-    "🎯 Transaction Control Room", 
-    "📑 Multi-Document Evidence Panel", 
-    "📊 Supplier Risk Intelligence", 
-    "🚨 Investigation Queue & Audit Trail"
-])
-
-# ------------------------------------------
-# TAB 1: CONTROL ROOM
-# ------------------------------------------
-with tab_control:
-    st.subheader("Transaction Stream Ledger & Real-Time Inspection")
-    selected_txn_id = st.selectbox("Select Transaction for Deep Forensic Analysis:", options=df_txns["Transaction_ID"].tolist(), index=0)
-    txn = df_txns[df_txns["Transaction_ID"] == selected_txn_id].iloc[0]
-    
-    st.markdown("#### 7-Stage Transaction Process Flow")
-    f1, f2, f3, f4, f5, f6, f7 = st.columns(7)
-    
-    f1.markdown(f'<div class="flow-step"><div style="font-size:0.7rem; color:#94A3B8;">1. PO ISSUED</div><div style="font-weight:700; font-size:0.9rem;">{txn["PO_Mass_t"]:.2f} t</div><div style="font-size:0.65rem; color:#38BDF8;">R1,850 / t</div></div>', unsafe_allow_html=True)
-    f2.markdown(f'<div class="flow-step"><div style="font-size:0.7rem; color:#94A3B8;">2. DISPATCH</div><div style="font-weight:700; font-size:0.9rem;">{txn["PO_Mass_t"]:.2f} t</div><div style="font-size:0.65rem; color:#94A3B8;">Gate Out</div></div>', unsafe_allow_html=True)
-    f3.markdown(f'<div class="flow-step flow-step-trusted"><div style="font-size:0.7rem; color:#34D399; font-weight:700;">3. WEIGHBRIDGE</div><div style="font-weight:700; font-size:1.0rem; color:#34D399;">{txn["Weighbridge_Mass_t"]:.2f} t</div><div style="font-size:0.65rem; color:#34D399;">✓ TRUSTED SCALE</div></div>', unsafe_allow_html=True)
-
-    is_warn = txn['Qty_Variance_t'] > 0
-    step_class = "flow-step-flagged" if is_warn else "flow-step"
-    badge_text = '⚠ Discrepancy' if is_warn else '✓ Matched'
-    badge_color = '#EF4444' if is_warn else '#10B981'
-    f4.markdown(f'<div class="{step_class}"><div style="font-size:0.7rem; color:#94A3B8;">4. DELIVERY NOTE</div><div style="font-weight:700; font-size:0.9rem;">{txn["Billed_Mass_t"]:.2f} t</div><div style="font-size:0.65rem; color:{badge_color};">{badge_text}</div></div>', unsafe_allow_html=True)
-
-    f5.markdown(f'<div class="flow-step"><div style="font-size:0.7rem; color:#94A3B8;">5. GRN</div><div style="font-weight:700; font-size:0.9rem;">{txn["Billed_Mass_t"]:.2f} t</div><div style="font-size:0.65rem; color:#94A3B8;">Warehouse Sync</div></div>', unsafe_allow_html=True)
-    f6.markdown(f'<div class="flow-step"><div style="font-size:0.7rem; color:#94A3B8;">6. TAX INVOICE</div><div style="font-weight:700; font-size:0.9rem;">R {txn["Billed_Mass_t"]*txn["Approved_Rate_ZAR"]:,.2f}</div><div style="font-size:0.65rem; color:#94A3B8;">Vendor Claim</div></div>', unsafe_allow_html=True)
-    f7.markdown(f'<div class="flow-step"><div style="font-size:0.7rem; color:#94A3B8;">7. SETTLEMENT</div><div style="font-weight:700; font-size:0.9rem;">R {txn["Weighbridge_Mass_t"]*txn["Approved_Rate_ZAR"]:,.2f}</div><div style="font-size:0.65rem; color:#10B981;">Reconciled Pay</div></div>', unsafe_allow_html=True)
-
-    st.markdown("<br>", unsafe_allow_html=True)
-    
-    col_left, col_right = st.columns([1, 1])
-    with col_left:
-        st.markdown("#### Physical vs Financial Reconciliation")
-        z_desc = "HIGH ANOMALY" if txn['Z_Score'] > 2.0 else "NORMAL"
-        recon_data = {
-            "Metric Parameter": [
-                "Trusted Physical Mass (Digital Scale Telemetry)",
-                "Billed Mass (Vendor Invoice / Delivery Note Claim)",
-                "Quantity Variance",
-                "Contract Approved Unit Rate",
-                "Calculated Potential Financial Exposure",
-                "Statistical Anomaly Z-Score",
-                "Exception Classification"
-            ],
-            "Extracted Value": [
-                f"{txn['Weighbridge_Mass_t']:.2f} t",
-                f"{txn['Billed_Mass_t']:.2f} t",
-                f"+{txn['Qty_Variance_t']:.2f} t" if txn['Qty_Variance_t'] > 0 else "0.00 t",
-                f"R {txn['Approved_Rate_ZAR']:,.2f} / t",
-                f"R {txn['Potential_Exposure_ZAR']:,.2f}",
-                f"{txn['Z_Score']} σ ({z_desc})",
-                txn['Exception_Type']
-            ]
-        }
-        st.table(pd.DataFrame(recon_data))
-        
-    with col_right:
-        st.markdown("#### Transaction Stream Summary Ledger")
-        st.dataframe(
-            df_txns[["Transaction_ID", "Supplier", "Material", "Weighbridge_Mass_t", "Billed_Mass_t", "Potential_Exposure_ZAR", "Status"]].head(10),
-            use_container_width=True
-        )
-
-# ------------------------------------------
-# TAB 2: MULTI-DOCUMENT EVIDENCE PANEL
-# ------------------------------------------
-with tab_evidence:
-    st.subheader(f"Evidence Audit Trail for Transaction: {selected_txn_id}")
-    e1, e2 = st.columns([1, 1])
-    
-    with e1:
-        st.markdown("#### Extracted Evidence Document Bundle")
-        doc_evidence = [
-            {"Document Type": "1. Purchase Order", "Doc Ref": "PO-10482", "Key Field": "40.00 t @ R1,850/t", "OCR Confidence": "99.7%", "Status": "Verified"},
-            {"Document Type": "2. Digital Weighbridge Scale Log", "Doc Ref": f"WB-{txn['SHA256_Hash'][:5].upper()}", "Key Field": f"{txn['Weighbridge_Mass_t']:.2f} t Net", "OCR Confidence": "99.9% (Hardware Telemetry)", "Status": "Verified Ground Truth"},
-            {"Document Type": "3. Delivery Note", "Doc Ref": "DN-55291", "Key Field": f"{txn['Billed_Mass_t']:.2f} t Claimed", "OCR Confidence": "97.8%", "Status": "Discrepancy" if txn['Qty_Variance_t']>0 else "Verified"},
-            {"Document Type": "4. Goods Received Note (GRN)", "Doc Ref": "GRN-99182", "Key Field": f"{txn['Billed_Mass_t']:.2f} t Ingested", "OCR Confidence": "98.2%", "Status": "Verified"},
-            {"Document Type": "5. Vendor Tax Invoice", "Doc Ref": "INV-88172", "Key Field": f"R {txn['Billed_Mass_t']*txn['Approved_Rate_ZAR']:,.2f}", "OCR Confidence": "99.1%", "Status": "Flagged" if txn['Qty_Variance_t']>0 else "Verified"},
-            {"Document Type": "6. Bank Payment Voucher", "Doc Ref": "PAY-33281", "Key Field": "Pending Approval", "OCR Confidence": "100%", "Status": "Held in Escrow"}
-        ]
-        st.dataframe(pd.DataFrame(doc_evidence), use_container_width=True)
-
-    with e2:
-        st.markdown("#### Cryptographic SHA-256 Provenance & Verification")
-        st.code(
-            f"[CRYPTOGRAPHIC PROVENANCE MANIFEST]\n"
-            f"Transaction ID : {selected_txn_id}\n"
-            f"Hardware Anchor: Scale #04 (Amatola Hub Weighbridge)\n"
-            f"Timestamp      : {txn['Timestamp']}\n"
-            f"Scale Payload  : {txn['Weighbridge_Mass_t']} t\n"
-            f"SHA-256 Hash   : {txn['SHA256_Hash']}\n\n"
-            f"[VERIFICATION RESULT]\n"
-            f"✓ Hardware Security Module Signature: VALID\n"
-            f"✓ Document Lineage Integrity: 6/6 Documents Verified\n"
-            f"✓ Immutable Audit Log Entry Created",
-            language="yaml"
-        )
-
-# ------------------------------------------
-# TAB 3: SUPPLIER RISK INTELLIGENCE
-# ------------------------------------------
-with tab_supplier:
-    st.subheader("Statistical Supplier Risk & Overbilling Profiles")
-    
-    supp_stats = df_txns.groupby("Supplier").agg(
-        Total_Txns=("Transaction_ID", "count"),
-        Total_Exceptions=("Potential_Exposure_ZAR", lambda x: int((x > 0).sum())),
-        Total_Potential_Exposure=("Potential_Exposure_ZAR", "sum"),
-        Avg_Qty_Variance=("Qty_Variance_t", "mean")
-    ).reset_index()
-    
-    supp_stats["Exception_Rate_%"] = round((supp_stats["Total_Exceptions"] / supp_stats["Total_Txns"]) * 100, 2)
-    
-    s_col1, s_col2 = st.columns([1, 1])
-    with s_col1:
-        st.markdown("#### Historical Supplier Overbilling Rankings")
-        st.dataframe(supp_stats.sort_values(by="Total_Potential_Exposure", ascending=False), use_container_width=True)
-        
-    with s_col2:
-        st.markdown("#### Potential Financial Exposure Distribution by Supplier")
-        fig_supp = px.pie(
-            supp_stats, 
-            names="Supplier", 
-            values="Total_Potential_Exposure",
-            hole=0.4,
-            color_discrete_sequence=px.colors.sequential.RdBu
-        )
-        fig_supp.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", font_color="#F8FAFC")
-        st.plotly_chart(fig_supp, use_container_width=True)
-
-# ------------------------------------------
-# TAB 4: INVESTIGATION QUEUE & AUDIT TRAIL
-# ------------------------------------------
-with tab_investigation:
-    st.subheader("Human-in-the-Loop Investigation Queue")
-    st.write("TrueFlow flags potential exceptions. Human auditors confirm and transition transactions to final settlement.")
-    
-    exceptions_df = df_txns[df_txns["Potential_Exposure_ZAR"] > 0]
-    
-    if len(exceptions_df) > 0:
-        inv_txn_id = st.selectbox("Select Flagged Transaction to Investigate:", options=exceptions_df["Transaction_ID"].tolist())
-        inv_item = exceptions_df[exceptions_df["Transaction_ID"] == inv_txn_id].iloc[0]
-        
-        ic1, ic2 = st.columns([1, 1])
-        
-        with ic1:
-            st.markdown(f"**Selected Transaction:** `{inv_txn_id}`")
-            st.markdown(f"**Supplier:** {inv_item['Supplier']}")
-            st.markdown(f"**Calculated Exposure:** :red[R {inv_item['Potential_Exposure_ZAR']:,.2f}]")
-            st.markdown(f"**Exception Classification:** {inv_item['Exception_Type']}")
-            
-        with ic2:
-            new_status = st.selectbox(
-                "Update Investigation Status:",
-                ["Open / Under Review", "Validated Exception (Credit Note Issued)", "Closed (Legitimate Adjustment)", "Closed (Measurement Error)"],
-                index=0
-            )
-            audit_note = st.text_area("Auditor Escalation Notes:", placeholder="e.g., Contacted supplier CFO regarding weighbridge discrepancy.")
-            
-            if st.button("Submit Audit Decision to Immutable Log"):
-                record = {
-                    "status": new_status,
-                    "note": audit_note,
-                    "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                }
-                st.session_state.investigations[str(inv_txn_id)] = record
-                st.success(f"Audit record updated for {inv_txn_id}. Transaction status changed to '{new_status}'.")
-
+# Sidebar Controls
+with st.sidebar:
+    st.markdown('## TRUEFLOW')
+    page=st.radio('Control Room',['Executive Overview','Transaction Control Room','Evidence','Risk & Analytics','Investigation Queue'])
     st.divider()
-    st.markdown("#### Logged Audit Trail History")
-    if len(st.session_state.investigations) > 0:
-        st.json(st.session_state.investigations)
-    else:
-        st.info("No manual audit updates recorded yet in this session.")
+    only=st.checkbox('Exceptions only',False)
+    selected_suppliers=st.multiselect('Supplier',sorted(df.supplier.unique()))
     
+    view=df[df.supplier.isin(selected_suppliers)].copy() if selected_suppliers else df.copy()
+    if only: 
+        view=view[view.status=='EXCEPTION']
+        
+    st.caption('Prototype / synthetic data')
+    st.caption('No live SAP, weighbridge or payment connection is claimed.')
+
+# Executive KPIs
+audited=len(view)
+value=view.invoice_amount.sum()
+exposure=view.potential_exposure.sum()
+exceptions=(view.status=='EXCEPTION').sum()
+coverage=(view.evidence_present/view.evidence_total*100).mean() if audited > 0 else 0
+
+def metric(label,value,note,cls=''):
+    st.markdown(f'<div class="card"><div class="card-label">{label}</div><div class="card-value {cls}">{value}</div><div class="card-note">{note}</div></div>',unsafe_allow_html=True)
+
+st.markdown('<div class="section">Executive Overview & Financial Metrics</div>',unsafe_allow_html=True)
+cols=st.columns(5)
+with cols[0]: metric('Transactions Audited',f'{audited:,}','Synthetic transactions processed','blue')
+with cols[1]: metric('Value Reconciled',f'R {value:,.0f}','Commercial value checked','green')
+with cols[2]: metric('Potential Exposure',f'R {exposure:,.2f}','Unresolved exceptions','red')
+with cols[3]: metric('Active Exception Queue',f'{exceptions}','Requires human review','amber')
+with cols[4]: metric('Evidence Coverage',f'{coverage:.1f}%','Required evidence present','green')
+
+# Safe transaction dropdown selector helper
+def get_valid_txn_selection(available_options):
+    if st.session_state.selected_txn not in available_options:
+        return available_options[0] if len(available_options) > 0 else None
+    return st.session_state.selected_txn
+
+# ==========================================
+# PAGE 1: EXECUTIVE OVERVIEW
+# ==========================================
+if page=='Executive Overview':
+    st.markdown('<div class="section">Exposure & Exception Intelligence</div>',unsafe_allow_html=True)
+    c1,c2=st.columns([1.65,1])
+    
+    with c1:
+        if len(view) > 0:
+            t=view.sort_values('timestamp').copy()
+            t['cumulative_value']=t.invoice_amount.cumsum()
+            t['cumulative_exposure']=t.potential_exposure.cumsum()
+            fig=px.line(t,x='timestamp',y=['cumulative_value','cumulative_exposure'],labels={'value':'ZAR','timestamp':'Time','variable':''},title='Cumulative reconciled value vs potential exposure')
+            fig.update_layout(template='plotly_dark',paper_bgcolor='rgba(0,0,0,0)',plot_bgcolor='rgba(0,0,0,0)',legend_title_text='')
+            st.plotly_chart(fig,use_container_width=True)
+        else:
+            st.info('No transaction data for current filter selection.')
+            
+    with c2:
+        root=view[view.status=='EXCEPTION']['classification'].value_counts().reset_index()
+        root.columns=['classification','count']
+        if len(root) > 0:
+            fig2=px.pie(root,values='count',names='classification',hole=.52,title='Exception classification')
+            fig2.update_layout(template='plotly_dark',paper_bgcolor='rgba(0,0,0,0)',plot_bgcolor='rgba(0,0,0,0)')
+            st.plotly_chart(fig2,use_container_width=True)
+        else: 
+            st.info('No exceptions in current filter.')
+            
+    st.markdown('<div class="section">Exception Snapshot</div>',unsafe_allow_html=True)
+    snap=view[view.status=='EXCEPTION'].sort_values('potential_exposure',ascending=False).head(8)
+    if len(snap) > 0:
+        st.dataframe(snap[['transaction_id','supplier','truck','classification','potential_exposure','anomaly_score','priority']].rename(columns={'potential_exposure':'Potential Exposure','anomaly_score':'Anomaly Score'}),use_container_width=True,hide_index=True)
+    else:
+        st.write("No active exceptions detected under current filter criteria.")
+
+# ==========================================
+# PAGE 2: TRANSACTION CONTROL ROOM
+# ==========================================
+elif page=='Transaction Control Room':
+    st.markdown('<div class="section">Transaction Control Room</div>',unsafe_allow_html=True)
+    opts=view.transaction_id.tolist() if len(view)>0 else df.transaction_id.tolist()
+    
+    selected_target = get_valid_txn_selection(opts)
+    selected=st.selectbox('Select transaction for deep forensic analysis',opts,index=opts.index(selected_target))
+    st.session_state.selected_txn=selected
+    
+    tx=df[df.transaction_id==selected].iloc[0]
+    
+    if tx.status=='EXCEPTION': 
+        st.markdown(f'<div class="alert-high">🔴 <b>{tx.classification}</b> — {tx.priority} priority. Potential exposure: <b>R {tx.potential_exposure:,.2f}</b>. Human investigation required.</div>',unsafe_allow_html=True)
+    else: 
+        st.markdown('<div class="alert-clean">🟢 Transaction currently reconciles. No material exception detected.</div>',unsafe_allow_html=True)
+        
+    st.markdown('### 7-Stage Transaction Process Flow')
+    stages=[('1. PURCHASE ORDER',f'{tx.approved_qty_t:.2f} t',f'R{tx.approved_rate:,.0f}/t'),('2. DISPATCH',f'{tx.dispatch_t:.2f} t','Truck dispatched'),('3. WEIGHBRIDGE',f'{tx.weighbridge_t:.2f} t','✓ TRUSTED SCALE'),('4. DELIVERY NOTE',f'{tx.delivery_note_t:.2f} t','Reported quantity'),('5. GRN',f'{tx.grn_t:.2f} t','Warehouse record'),('6. INVOICE',f'R{tx.invoice_amount:,.0f}',f'{tx.invoice_qty_t:.2f} t billed'),('7. SETTLEMENT',f'R{tx.payment_amount:,.0f}','Payment record')]
+    sc=st.columns(7)
+    for col,(title,val,note) in zip(sc,stages):
+        with col: 
+            st.markdown(f'<div class="stage"><div class="stage-title">{title}</div><div class="stage-value">{val}</div><div class="stage-note">{note}</div></div>',unsafe_allow_html=True)
+            
+    st.markdown('### Physical vs Financial Reconciliation')
+    a,b=st.columns([1.15,.85])
+    with a:
+        rec=pd.DataFrame({
+            'Metric':['Trusted Physical Mass (Digital Scale)','Delivery Note Quantity','GRN Quantity','Billed Quantity','Quantity Variance','Quantity Variance %','Contract Approved Unit Rate','Invoice Unit Rate','Price Exposure','Quantity Exposure','Duplicate Exposure','Potential Financial Exposure','Statistical Anomaly Z-Score','Exception Classification'],
+            'Value':[f'{tx.weighbridge_t:.2f} t',f'{tx.delivery_note_t:.2f} t',f'{tx.grn_t:.2f} t',f'{tx.invoice_qty_t:.2f} t',f'{tx.variance_t:+.2f} t',f'{tx.variance_pct:+.2f}%',f'R {tx.approved_rate:,.2f}/t',f'R {tx.invoice_rate:,.2f}/t',f'R {tx.price_exposure:,.2f}',f'R {tx.qty_exposure:,.2f}',f'R {tx.duplicate_exposure:,.2f}',f'R {tx.potential_exposure:,.2f}',f'{tx.z_score:.2f}',tx.classification]
+        })
+        st.dataframe(rec,use_container_width=True,hide_index=True)
+        
+    with b:
+        st.markdown('#### Transaction metadata')
+        st.write(f'**Supplier:** {tx.supplier}')
+        st.write(f'**Truck:** {tx.truck}')
+        st.write(f'**Material:** {tx.material}')
+        st.write(f'**PO:** {tx.po_number}')
+        st.write(f'**Transaction:** `{tx.transaction_id}`')
+        st.write(f'**Timestamp:** {tx.timestamp:%Y-%m-%d %H:%M}')
+        st.write(f'**Anomaly score:** `{tx.anomaly_score}/100`')
+        st.write(f'**Priority:** `{tx.priority}`')
+
+# ==========================================
+# PAGE 3: EVIDENCE & PROVENANCE
+# ==========================================
+elif page=='Evidence':
+    st.markdown('<div class="section">Multi-Document Evidence & Provenance</div>',unsafe_allow_html=True)
+    opts=view.transaction_id.tolist() if len(view)>0 else df.transaction_id.tolist()
+    
+    selected_target = get_valid_txn_selection(opts)
+    selected=st.selectbox('Transaction',opts,index=opts.index(selected_target))
+    tx=df[df.transaction_id==selected].iloc[0]
+    st.session_state.selected_txn=selected
+    
+    docs=[('Purchase Order',tx.po_number,f'{tx.approved_qty_t:.2f} t @ R{tx.approved_rate:,.0f}/t',True,99.7),('Dispatch Record',f'DIS-{tx.transaction_id[-4:]}',f'{tx.dispatch_t:.2f} t • {tx.truck}',True,98.9),('Digital Weighbridge',f'WB-{tx.transaction_id[-4:]}',f'Net {tx.weighbridge_t:.2f} t',True,99.9),('Delivery Note',f'DN-{tx.transaction_id[-4:]}',f'Claimed {tx.delivery_note_t:.2f} t',True,97.8),('Goods Receipt',f'GRN-{tx.transaction_id[-4:]}',f'Recorded {tx.grn_t:.2f} t',not tx.missing_evidence,98.4),('Invoice',f'INV-{tx.transaction_id[-4:]}',f'{tx.invoice_qty_t:.2f} t • R{tx.invoice_amount:,.2f}',True,99.1),('Payment',f'PAY-{tx.transaction_id[-4:]}',f'R{tx.payment_amount:,.2f}',True,99.4)]
+    
+    for name,ref,detail,present,conf in docs:
+        icon='✓' if present else '⚠'
+        cls='green' if present else 'amber'
+        st.markdown(f'<div class="card" style="margin-bottom:8px;min-height:0;"><b class="{cls}">{icon} {name}</b> &nbsp; <span class="smallmono">{ref}</span><br><span style="color:#9aa8ba;font-size:12px">{detail}</span><span style="float:right;color:#7f92aa;font-size:11px">Confidence {conf:.1f}% • Source: demo ledger</span></div>',unsafe_allow_html=True)
+        
+    st.info('Production version: every extracted value should retain source document, page/field, extraction engine version and timestamp.')
+
+# ==========================================
+# PAGE 4: RISK & ANALYTICS
+# ==========================================
+elif page=='Risk & Analytics':
+    st.markdown('<div class="section">Risk, Supplier & Truck Intelligence</div>',unsafe_allow_html=True)
+    supplier=df.groupby('supplier').agg(Transactions=('transaction_id','count'),Exceptions=('status',lambda x:(x=='EXCEPTION').sum()),Exposure=('potential_exposure','sum'),AvgVariance=('variance_pct','mean')).reset_index()
+    supplier['Exception Rate %']=supplier.Exceptions/supplier.Transactions*100
+    
+    c1,c2=st.columns(2)
+    with c1:
+        fig=px.bar(supplier.sort_values('Exposure',ascending=False),x='supplier',y='Exposure',title='Potential exposure by supplier',labels={'Exposure':'ZAR','supplier':''})
+        fig.update_layout(template='plotly_dark',paper_bgcolor='rgba(0,0,0,0)',plot_bgcolor='rgba(0,0,0,0)')
+        st.plotly_chart(fig,use_container_width=True)
+        
+    with c2:
+        fig=px.bar(supplier.sort_values('Exception Rate %',ascending=False),x='supplier',y='Exception Rate %',title='Exception rate by supplier',labels={'Exception Rate %':'%','supplier':''})
+        fig.update_layout(template='plotly_dark',paper_bgcolor='rgba(0,0,0,0)',plot_bgcolor='rgba(0,0,0,0)')
+        st.plotly_chart(fig,use_container_width=True)
+        
+    st.dataframe(supplier.rename(columns={'AvgVariance':'Avg Quantity Variance %'}),use_container_width=True,hide_index=True)
+    
+    st.markdown('### Truck intelligence')
+    truck=df.groupby('truck').agg(Trips=('transaction_id','count'),Exceptions=('status',lambda x:(x=='EXCEPTION').sum()),Exposure=('potential_exposure','sum'),AvgMass=('weighbridge_t','mean'),AvgVariance=('variance_pct','mean')).reset_index()
+    st.dataframe(truck,use_container_width=True,hide_index=True)
+
+# ==========================================
+# PAGE 5: INVESTIGATION QUEUE
+# ==========================================
+else:
+    st.markdown('<div class="section">Investigation Queue & Audit Trail</div>',unsafe_allow_html=True)
+    q=df[df.status=='EXCEPTION'].copy()
+    q['Decision']=q.transaction_id.map(lambda x:st.session_state.investigation.get(x,'Open'))
+    q=q.sort_values(['priority','potential_exposure'],ascending=[True,False])
+    
+    st.dataframe(q[['transaction_id','supplier','classification','potential_exposure','anomaly_score','priority','Decision']].rename(columns={'transaction_id':'Transaction','classification':'Issue','potential_exposure':'Potential Exposure','anomaly_score':'Score'}),use_container_width=True,hide_index=True)
+    
+    st.markdown('### Review transaction')
+    if len(q) > 0:
+        selected=st.selectbox('Transaction',q.transaction_id.tolist())
+        tx=df[df.transaction_id==selected].iloc[0]
+        current=st.session_state.investigation.get(selected,'Open')
+        
+        statuses=['Open','Under Review','Validated Exception','Recovered','Explained / Closed']
+        decision=st.selectbox('Investigation status',statuses,index=statuses.index(current))
+        note=st.text_area('Investigator note',placeholder='Record the reason, evidence reviewed and outcome.')
+        
+        if st.button('Save investigation outcome',type='primary'): 
+            st.session_state.investigation[selected]=decision
+            st.success(f'{selected} updated to: {decision}')
+            st.rerun()
+    else:
+        st.info("No active exceptions requiring review.")
+        
+    st.capti
